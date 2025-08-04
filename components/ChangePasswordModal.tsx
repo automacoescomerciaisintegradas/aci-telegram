@@ -63,7 +63,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen
       });
       showToast(message, 'success');
       handleClose();
-    } catch (error) {
+    } catch {
       // Erro já é tratado pelo hook useAuth
     }
   };

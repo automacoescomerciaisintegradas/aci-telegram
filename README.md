@@ -22,17 +22,17 @@ Sistema completo de automações para e-commerce com integração Shopee, Telegr
 - Dashboard com métricas
 - Sistema de créditos
 
-## 🧪 Credenciais de Teste
+## 🔐 Sistema de Autenticação
 
-```
-Administrador:
-Email: admin@aci.com
-Senha: admin123
+### 👨‍💼 Administrador
+- Login OAuth (Google/GitHub)
+- Formulário de login por e-mail
+- Acesso completo ao sistema
 
-Usuário:
-Email: user@aci.com
-Senha: user123
-```
+### 👤 Usuário
+- Acesso restrito às funcionalidades de usuário
+- Interface simplificada
+- Sem acesso ao painel administrativo
 
 ## 🚀 Como Executar
 

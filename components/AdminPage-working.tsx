@@ -103,10 +103,11 @@ export const AdminPage: React.FC = () => {
                 'Configurações Salvas',
                 'Todas as configurações foram salvas com sucesso!'
             );
-        } catch (error: any) {
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : 'Erro desconhecido ao salvar configurações';
             notificationService.error(
                 'Erro ao Salvar',
-                error.message || 'Erro desconhecido ao salvar configurações'
+                message
             );
         } finally {
             setIsSaving(false);
@@ -149,10 +150,11 @@ export const AdminPage: React.FC = () => {
                 notificationService.error('Erro de Conexão', result.message);
             }
 
-        } catch (error: any) {
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : 'Erro desconhecido';
             notificationService.error(
                 'Erro no Teste',
-                `Erro ao testar ${service}: ${error.message}`
+                `Erro ao testar ${service}: ${message}`
             );
         } finally {
             setIsValidating(prev => ({ ...prev, [service]: false }));
@@ -395,8 +397,9 @@ export const AdminPage: React.FC = () => {
                                                 `${successCount}/${totalCount} APIs funcionando. Verifique os detalhes.`
                                             );
                                         }
-                                    } catch (error: any) {
-                                        notificationService.error('Erro no Teste', error.message);
+                                    } catch (error: unknown) {
+                                        const message = error instanceof Error ? error.message : 'Erro desconhecido';
+                                        notificationService.error('Erro no Teste', message);
                                     } finally {
                                         setIsValidating({});
                                     }

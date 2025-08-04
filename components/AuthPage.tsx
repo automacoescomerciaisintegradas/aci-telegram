@@ -106,7 +106,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
         });
       }
       onLoginSuccess();
-    } catch (err) {
+    } catch {
       // Erro já é tratado pelo hook useAuth
     }
   };
@@ -246,7 +246,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
                 try {
                   await loginWithGoogle();
                   onLoginSuccess();
-                } catch (err) {
+                } catch {
                   // Erro já é tratado pelo hook useAuth
                 }
               }}
@@ -274,46 +274,30 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
         </a>
       </p>
 
+      <div className="mt-6 w-full max-w-md">
+        <div className="text-center">
+          <button
+            type="button"
+            onClick={() => {
+              // Esta função será implementada no componente pai
+              if (window.location.hash !== '#admin') {
+                window.location.hash = 'admin';
+                window.location.reload();
+              }
+            }}
+            className="text-xs text-gray-500 hover:text-gray-400 transition-colors underline"
+          >
+            👨‍💼 Acesso Administrativo
+          </button>
+        </div>
+      </div>
+
       <ForgotPasswordModal
         isOpen={showForgotPassword}
         onClose={() => setShowForgotPassword(false)}
       />
 
-      {/* Card com credenciais de teste */}
-      <div className="mt-6 w-full max-w-md bg-slate-800/50 rounded-lg border border-gray-700 p-4">
-        <h3 className="text-sm font-semibold text-gray-300 mb-3 text-center">🧪 Credenciais de Teste</h3>
-        <div className="space-y-3 text-xs">
-          <button
-            type="button"
-            onClick={() => {
-              setFormData(prev => ({ ...prev, email: 'admin@aci.com', password: 'admin123' }));
-              setFieldErrors({});
-            }}
-            className="w-full bg-slate-700/50 p-3 rounded hover:bg-slate-700 transition-colors text-left"
-          >
-            <p className="font-medium text-blue-400 mb-1">👨‍💼 Administrador</p>
-            <p className="text-gray-300">Email: admin@aci.com</p>
-            <p className="text-gray-300">Senha: admin123</p>
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setFormData(prev => ({ ...prev, email: 'user@aci.com', password: 'user123' }));
-              setFieldErrors({});
-            }}
-            className="w-full bg-slate-700/50 p-3 rounded hover:bg-slate-700 transition-colors text-left"
-          >
-            <p className="font-medium text-green-400 mb-1">👤 Usuário</p>
-            <p className="text-gray-300">Email: user@aci.com</p>
-            <p className="text-gray-300">Senha: user123</p>
-          </button>
-        </div>
-        <div className="mt-3 pt-3 border-t border-gray-600">
-          <p className="text-xs text-gray-400 text-center">
-            💡 Clique nos cards acima para preencher automaticamente
-          </p>
-        </div>
-      </div>
+
     </div>
   );
 };

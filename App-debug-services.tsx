@@ -7,6 +7,13 @@ const AppDebugServices: React.FC = () => {
   useEffect(() => {
     const testServices = async () => {
       const results: string[] = [];
+
+      const getErrorMessage = (error: unknown): string => {
+        if (error instanceof Error) {
+          return error.message;
+        }
+        return String(error);
+      };
       
       try {
         // Teste 1: ConfigService
@@ -14,24 +21,24 @@ const AppDebugServices: React.FC = () => {
         const config = configService.getAll();
         results.push('✅ ConfigService carregado');
         results.push(`📋 Config: ${JSON.stringify(config).substring(0, 50)}...`);
-      } catch (error: any) {
-        results.push(`❌ ConfigService erro: ${error.message}`);
+      } catch (error) {
+        results.push(`❌ ConfigService erro: ${getErrorMessage(error)}`);
       }
 
       try {
         // Teste 2: ApiValidationService
-        const { apiValidationService } = await import('./services/apiValidationService');
+        await import('./services/apiValidationService');
         results.push('✅ ApiValidationService carregado');
-      } catch (error: any) {
-        results.push(`❌ ApiValidationService erro: ${error.message}`);
+      } catch (error) {
+        results.push(`❌ ApiValidationService erro: ${getErrorMessage(error)}`);
       }
 
       try {
         // Teste 3: NotificationService
-        const { notificationService } = await import('./services/notificationService');
+        await import('./services/notificationService');
         results.push('✅ NotificationService carregado');
-      } catch (error: any) {
-        results.push(`❌ NotificationService erro: ${error.message}`);
+      } catch (error) {
+        results.push(`❌ NotificationService erro: ${getErrorMessage(error)}`);
       }
 
       setStatus(results);

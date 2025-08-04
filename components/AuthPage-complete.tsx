@@ -70,8 +70,9 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
         setError(response.error);
       }
 
-    } catch (err: any) {
-      setError(err.message || 'Erro inesperado');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Erro inesperado';
+      setError(message);
     } finally {
       setIsLoading(false);
     }
@@ -89,8 +90,9 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
       } else {
         onLoginSuccess();
       }
-    } catch (err: any) {
-      setError(err.message || 'Erro ao fazer login com Google');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Erro ao fazer login com Google';
+      setError(message);
     } finally {
       setIsLoading(false);
     }

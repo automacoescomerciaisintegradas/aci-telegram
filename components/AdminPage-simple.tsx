@@ -28,8 +28,8 @@ export const AdminPage: React.FC = () => {
                     ...parsed,
                     geminiApiKey: parsed.geminiApiKey || envApiKey
                 });
-            } catch (error) {
-                console.error('Erro ao carregar configurações:', error);
+            } catch (e) {
+                console.error('Erro ao carregar configurações:', e);
                 setConfig(prev => ({ ...prev, geminiApiKey: envApiKey }));
             }
         } else {
@@ -47,7 +47,7 @@ export const AdminPage: React.FC = () => {
             await new Promise(resolve => setTimeout(resolve, 1000));
 
             alert('Configurações salvas com sucesso!');
-        } catch (error) {
+        } catch {
             alert('Erro ao salvar configurações');
         } finally {
             setIsSaving(false);

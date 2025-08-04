@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { BellIcon, CheckIcon, XMarkIcon, ClockIcon, TrendingUpIcon, AlertTriangleIcon } from './Icons';
 
 export interface Notification {

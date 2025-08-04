@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BellIcon, CheckIcon, XMarkIcon } from './Icons';
+import { BellIcon, CheckIcon } from './Icons';
 
 interface NotificationPreferences {
   email: boolean;
@@ -42,7 +42,7 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({
     }
   };
 
-  const updatePreference = (key: keyof NotificationPreferences, value: any) => {
+  const updatePreference = (key: keyof NotificationPreferences, value: string | boolean) => {
     setLocalPreferences(prev => ({
       ...prev,
       [key]: value
@@ -59,7 +59,7 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({
     }));
   };
 
-  const updateQuietHours = (key: keyof NotificationPreferences['quietHours'], value: any) => {
+  const updateQuietHours = (key: keyof NotificationPreferences['quietHours'], value: string | boolean) => {
     setLocalPreferences(prev => ({
       ...prev,
       quietHours: {

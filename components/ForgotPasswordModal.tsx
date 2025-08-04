@@ -37,7 +37,7 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ isOpen
       showToast(message, 'success');
       setEmail('');
       onClose();
-    } catch (error) {
+    } catch {
       // Erro já é tratado pelo hook useAuth
     }
   };

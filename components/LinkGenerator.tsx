@@ -18,7 +18,7 @@ export const LinkGenerator: React.FC = () => {
       if (config.affiliateId) {
         setAffiliateId(config.affiliateId);
       }
-    } catch (error) {
+    } catch {
       console.log('Configurações do Shopee não encontradas, usando valores padrão');
     }
   }, []);
