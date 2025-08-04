@@ -170,9 +170,9 @@ npm run git:feature   # Nova funcionalidade
 ## 📞 Suporte
 
 Para dúvidas e suporte:
-- 📧 Email: suporte@aci.com
-- 💬 Telegram: @aci_suporte
-- 📱 WhatsApp: +55 11 99999-9999
+- 📧 Email: contato@automacoescomerciais.com.br
+- 💬 Telegram: https://t.me/+9cdym9gvPQ9iOWNh
+- 📱 WhatsApp: +55 88 921567214
 
 ## 📜 Licença
 
