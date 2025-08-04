@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { scheduledNotificationService, ScheduledNotification } from '../services/scheduledNotificationService';
-import { ClockIcon, CheckIcon, XMarkIcon, AlertTriangleIcon } from './Icons';
+import { ClockIcon, CheckIcon, XMarkIcon } from './Icons';
 
 export const ScheduledNotifications: React.FC = () => {
   const [scheduledNotifications, setScheduledNotifications] = useState<ScheduledNotification[]>([]);
@@ -260,7 +260,7 @@ export const ScheduledNotifications: React.FC = () => {
                 </label>
                 <select
                   value={formData.type}
-                  onChange={(e) => setFormData({...formData, type: e.target.value as any})}
+                  onChange={(e) => setFormData({...formData, type: e.target.value as 'info' | 'success' | 'warning' | 'error' | 'promotion' | 'campaign' | 'task'})}
                   className="w-full bg-slate-800 border border-dark-border rounded-lg p-3 text-dark-text-primary focus:ring-2 focus:ring-brand-primary"
                 >
                   <option value="info">Info</option>
@@ -279,7 +279,7 @@ export const ScheduledNotifications: React.FC = () => {
                 </label>
                 <select
                   value={formData.category}
-                  onChange={(e) => setFormData({...formData, category: e.target.value as any})}
+                  onChange={(e) => setFormData({...formData, category: e.target.value as 'system' | 'marketing' | 'sales' | 'alerts'})}
                   className="w-full bg-slate-800 border border-dark-border rounded-lg p-3 text-dark-text-primary focus:ring-2 focus:ring-brand-primary"
                 >
                   <option value="system">Sistema</option>
@@ -295,7 +295,7 @@ export const ScheduledNotifications: React.FC = () => {
                 </label>
                 <select
                   value={formData.priority}
-                  onChange={(e) => setFormData({...formData, priority: e.target.value as any})}
+                  onChange={(e) => setFormData({...formData, priority: e.target.value as 'low' | 'medium' | 'high'})}
                   className="w-full bg-slate-800 border border-dark-border rounded-lg p-3 text-dark-text-primary focus:ring-2 focus:ring-brand-primary"
                 >
                   <option value="low">Baixa</option>
@@ -326,7 +326,7 @@ export const ScheduledNotifications: React.FC = () => {
                   </label>
                   <select
                     value={formData.recurringType}
-                    onChange={(e) => setFormData({...formData, recurringType: e.target.value as any})}
+                    onChange={(e) => setFormData({...formData, recurringType: e.target.value as 'daily' | 'weekly' | 'monthly'})}
                     className="w-full bg-slate-800 border border-dark-border rounded-lg p-3 text-dark-text-primary focus:ring-2 focus:ring-brand-primary"
                   >
                     <option value="daily">Diário</option>

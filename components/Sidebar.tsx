@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { DashboardIcon, LinkIcon, ImageIcon, ChatIcon, UserIcon, LogoutIcon, CreditIcon, SearchIcon, TrendingUpIcon, TelegramIcon, ShoppingCartSendIcon, SettingsIcon, BellIcon } from './Icons';
+import { LinkIcon, ImageIcon, ChatIcon, LogoutIcon, CreditIcon, SearchIcon, TrendingUpIcon, TelegramIcon, ShoppingCartSendIcon, SettingsIcon, BellIcon } from './Icons';
 import { Page } from '../App';
 import { useAuth } from '../hooks/useAuth';
 import { ThemeToggle } from './ThemeToggle';

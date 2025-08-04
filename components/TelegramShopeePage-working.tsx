@@ -25,6 +25,21 @@ interface OfferMessage {
     product: Product;
 }
 
+interface TelegramChat {
+    id: number;
+    title?: string;
+    first_name?: string;
+    type: string;
+    username?: string;
+    migratedFrom?: number;
+}
+
+interface SpecificProduct {
+    title: string;
+    price: string;
+    image_url: string;
+}
+
 export const TelegramShopeePage: React.FC = () => {
     const [currentStep, setCurrentStep] = useState(1);
     const [config, setConfig] = useState<TelegramConfig>({
@@ -39,7 +54,7 @@ export const TelegramShopeePage: React.FC = () => {
     const [error, setError] = useState('');
     const [isSending, setIsSending] = useState(false);
     const [isTesting, setIsTesting] = useState(false);
-    const [foundChats, setFoundChats] = useState<any[]>([]);
+    const [foundChats, setFoundChats] = useState<TelegramChat[]>([]);
     const [showChatList, setShowChatList] = useState(false);
     const [newDestinationName, setNewDestinationName] = useState('');
     const [newDestinationId, setNewDestinationId] = useState('');
@@ -63,7 +78,7 @@ export const TelegramShopeePage: React.FC = () => {
                     affiliateId: parsed.telegramAffiliateId ? '***' : '',
                     destinations: (parsed.telegramDestinations || []).length
                 });
-            } catch (error) {
+            } catch (error: unknown) {
                 console.error('Erro ao carregar configurações:', error);
             }
         }
@@ -84,7 +99,7 @@ export const TelegramShopeePage: React.FC = () => {
                     affiliateId: config.affiliateId ? '***' : '',
                     destinations: config.destinations.length
                 });
-            } catch (error) {
+            } catch (error: unknown) {
                 console.error('Erro ao salvar configurações:', error);
             }
         }
@@ -171,7 +186,7 @@ export const TelegramShopeePage: React.FC = () => {
                     } else {
                         testResults.push(`⚠️ ${destination.name}: Não foi possível verificar permissões`);
                     }
-                } catch (err) {
+                } catch (err: unknown) {
                     testResults.push(`❌ ${destination.name}\n   Erro: Falha na conexão`);
                 }
             }
@@ -199,7 +214,6 @@ export const TelegramShopeePage: React.FC = () => {
     // Função para diagnosticar problemas de autorização
     const diagnoseAuthorizationIssues = () => {
         const issues = [];
-        const solutions = [];
 
         issues.push("🔍 DIAGNÓSTICO DE PROBLEMAS DE AUTORIZAÇÃO");
         issues.push("");
@@ -238,7 +252,7 @@ export const TelegramShopeePage: React.FC = () => {
             setNewDestinationId(text);
             setNewDestinationName(chatTitle);
             alert(`✅ ID copiado!\n\n${chatTitle}\nID: ${text}\n\nAgora preencha o nome e clique em "Adicionar Destino".`);
-        } catch (err) {
+        } catch (err: unknown) {
             // Fallback para navegadores mais antigos
             const textArea = document.createElement('textarea');
             textArea.value = text;
@@ -248,7 +262,7 @@ export const TelegramShopeePage: React.FC = () => {
             document.body.removeChild(textArea);
             setNewDestinationId(text);
             setNewDestinationName(chatTitle);
-            alert(`✅ ID copiado!\n\n${chatTitle}\nID: ${text}\n\nAgora preencha o nome e clique em "Adicionar Destino".`);
+            alert(`✅ ID copiado!\n\n${chatTitle}\nID: ${text}\n\nAgora preencha o nome e clique em \"Adicionar Destino\".`);
         }
     };
 
@@ -433,8 +447,8 @@ export const TelegramShopeePage: React.FC = () => {
             setFoundChats(chatArray);
             setShowChatList(true);
 
-        } catch (err: any) {
-            setError('Erro ao buscar atualizações: ' + err.message);
+        } catch (err: unknown) {
+            setError('Erro ao buscar atualizações: ' + (err instanceof Error ? err.message : String(err)));
         } finally {
             setIsTesting(false);
         }
@@ -594,8 +608,8 @@ export const TelegramShopeePage: React.FC = () => {
 
             setProduct(productData);
             setCurrentStep(3);
-        } catch (err: any) {
-            setError('Erro ao buscar produto: ' + err.message);
+        } catch (err: unknown) {
+            setError('Erro ao buscar produto: ' + (err instanceof Error ? err.message : String(err)));
         } finally {
             setIsLoading(false);
         }
@@ -653,8 +667,8 @@ ${emoji} ${product.title}
                 product: product
             });
             setCurrentStep(4);
-        } catch (err: any) {
-            setError('Erro ao gerar texto da oferta: ' + err.message);
+        } catch (err: unknown) {
+            setError('Erro ao gerar texto da oferta: ' + (err instanceof Error ? err.message : String(err)));
         } finally {
             setIsLoading(false);
         }
@@ -773,7 +787,7 @@ ${emoji} ${product.title}
                             results.push(`❌ ${destination.name}: ${result.description}`);
                         }
                     }
-                } catch (err: any) {
+                } catch (err: unknown) {
                     results.push(`❌ ${destination.name}: Erro de conexão`);
                 }
             }
@@ -798,8 +812,8 @@ ${emoji} ${product.title}
                 setProduct(null);
                 setOfferMessage(null);
             }
-        } catch (err: any) {
-            let errorMessage = err.message;
+        } catch (err: unknown) {
+            let errorMessage = err instanceof Error ? err.message : String(err);
 
             if (errorMessage.includes('chat not found')) {
                 errorMessage = `❌ Chat não encontrado!\n\n🔧 Soluções:\n• Verifique se o ID do chat está correto\n• Adicione o bot ao canal/grupo\n• Torne o bot administrador (para canais)\n• Use o botão "Testar Conexão" primeiro`;

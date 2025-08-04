@@ -75,8 +75,8 @@ export const TelegramShopeePage: React.FC = () => {
 
             setProduct(productDetails);
             setCurrentStep(3);
-        } catch (err: any) {
-            setError('Erro ao buscar produto: ' + err.message);
+        } catch (err: unknown) {
+            setError('Erro ao buscar produto: ' + (err instanceof Error ? err.message : String(err)));
         } finally {
             setIsLoading(false);
         }
@@ -97,8 +97,8 @@ export const TelegramShopeePage: React.FC = () => {
                 product: product
             });
             setCurrentStep(4);
-        } catch (err: any) {
-            setError('Erro ao gerar texto da oferta: ' + err.message);
+        } catch (err: unknown) {
+            setError('Erro ao gerar texto da oferta: ' + (err instanceof Error ? err.message : String(err)));
         } finally {
             setIsLoading(false);
         }
@@ -162,8 +162,8 @@ export const TelegramShopeePage: React.FC = () => {
             } else {
                 throw new Error(result.description || 'Erro desconhecido do Telegram');
             }
-        } catch (err: any) {
-            setError('Erro ao enviar para o Telegram: ' + err.message);
+        } catch (err: unknown) {
+            setError('Erro ao enviar para o Telegram: ' + (err instanceof Error ? err.message : String(err)));
         } finally {
             setIsSending(false);
         }

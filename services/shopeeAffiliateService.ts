@@ -5,6 +5,10 @@ export interface ShopeeAffiliateConfig {
   apiKey?: string;
 }
 
+export interface BitlyConfig {
+  accessToken?: string;
+}
+
 export interface ShopeeProduct {
   id: string;
   title: string;
@@ -188,12 +192,37 @@ class ShopeeAffiliateService {
   }
 
   /**
-   * Encurta URL usando serviço do Shopee (se disponível)
+   * Encurta URL usando o Bitly.
    */
-  async shortenUrl(affiliateUrl: string): Promise<string> {
-    // Placeholder para implementação futura
-    // Poderia integrar com API do Shopee para encurtar URLs
-    return affiliateUrl;
+  async shortenLink(longUrl: string): Promise<{ link: string }> {
+    try {
+      const config = configService.get('bitly');
+      const accessToken = config.accessToken;
+
+      if (!accessToken) {
+        throw new Error('Token de acesso do Bitly não configurado. Configure em Painel Administrativo > APIs > Bitly.');
+      }
+
+      const response = await fetch('https://api-ssl.bitly.com/v4/shorten', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ long_url: longUrl }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`Erro ao encurtar link: ${errorData.message || response.statusText}`);
+      }
+
+      const data = await response.json();
+      return { link: data.link };
+    } catch (error) {
+      console.error('Erro ao encurtar link com Bitly:', error);
+      throw error;
+    }
   }
 }
 

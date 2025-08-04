@@ -20,11 +20,16 @@ export interface ShopeeConfig {
   apiKey?: string;
 }
 
+export interface BitlyConfig {
+  accessToken?: string;
+}
+
 export interface ApiConfig {
   gemini: GeminiConfig;
   telegram: TelegramConfig;
   whatsapp: WhatsAppConfig;
   shopee: ShopeeConfig;
+  bitly: BitlyConfig;
 }
 
 export interface StoredConfig {
@@ -74,7 +79,11 @@ const DEFAULT_CONFIG: ApiConfig = {
   shopee: {
     affiliateId: '',
     apiKey: ''
+  },
+  bitly: {
+    accessToken: ''
   }
+};
 };
 
 const CONFIG_KEY = 'aci_config';
@@ -118,6 +127,9 @@ class ConfigService {
         shopee: {
           affiliateId: parsedConfig.apis.shopee.affiliateId,
           apiKey: decryptKey(parsedConfig.apis.shopee.apiKey || '')
+        },
+        bitly: {
+          accessToken: decryptKey(parsedConfig.apis.bitly?.accessToken || '')
         }
       };
 
@@ -163,6 +175,10 @@ class ConfigService {
             affiliateId: config.shopee.affiliateId,
             apiKey: encryptKey(config.shopee.apiKey || ''),
             status: config.shopee.affiliateId || config.shopee.apiKey ? 'active' : 'inactive'
+          },
+          bitly: {
+            accessToken: encryptKey(config.bitly?.accessToken || ''),
+            status: config.bitly?.accessToken ? 'active' : 'inactive'
           }
         }
       };
@@ -198,6 +214,8 @@ class ConfigService {
         return !!config.whatsapp.apiKey;
       case 'shopee':
         return !!(config.shopee.affiliateId || config.shopee.apiKey);
+      case 'bitly':
+        return !!config.bitly.accessToken;
       default:
         return false;
     }
@@ -264,7 +282,12 @@ class ConfigService {
       shopee: {
         affiliateId: config.shopee.affiliateId,
         apiKey: config.shopee.apiKey ? '***configurado***' : ''
+      },
+      bitly: {
+        accessToken: config.bitly.accessToken ? '***configurado***' : ''
       }
+    };
+  }
     };
   }
 }

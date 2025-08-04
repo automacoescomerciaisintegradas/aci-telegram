@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { getShopeeProductDetailsFromUrl, generateShopeeOfferMessageFromApi, Product, generateShopeeLinkFromApi } from '../services/geminiService';
 import { SearchIcon, MagicWandIcon, SpinnerIcon, AlertTriangleIcon, TelegramIcon } from './Icons';
+import ShopeeLinkShortener from './ShopeeLinkShortener';
 import { notificationService } from '../services/notificationService';
 
 export const TelegramShopeePage: React.FC = () => {
@@ -216,6 +217,9 @@ export const TelegramShopeePage: React.FC = () => {
 
                     {renderProductDetails()}
                     {renderMessageComposer()}
+
+                    <hr className="border-dark-border" />
+                    <ShopeeLinkShortener />
                 </div>
 
                 {/* Preview Column */}

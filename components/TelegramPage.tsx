@@ -1,4 +1,4 @@
-import React, { useState, useCallback, FormEvent } from 'react';
+import React, { useState, useCallback } from 'react';
 import { generateTelegramMessageFromApi } from '../services/geminiService';
 import { TelegramIcon, MagicWandIcon, SpinnerIcon, AlertTriangleIcon } from './Icons';
 

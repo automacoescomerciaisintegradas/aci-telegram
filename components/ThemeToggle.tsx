@@ -43,9 +43,11 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
   variant = 'button', 
   className = '' 
 }) => {
-  const { theme, actualTheme, setTheme, toggleTheme } = useTheme();
+  const { theme, setTheme, toggleTheme } = useTheme();
 
   if (variant === 'button') {
+    const { actualTheme } = useTheme();
+
     return (
       <button
         onClick={toggleTheme}
@@ -71,7 +73,7 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
     <div className={`relative ${className}`}>
       <select
         value={theme}
-        onChange={(e) => setTheme(e.target.value as any)}
+        onChange={(e) => setTheme(e.target.value as 'light' | 'dark' | 'system')}
         className="
           appearance-none bg-gray-200 dark:bg-gray-700 
           text-gray-700 dark:text-gray-300
@@ -145,8 +147,8 @@ export const ThemeSelector: React.FC<{ className?: string }> = ({ className = ''
             {themes.map((themeOption) => (
               <button
                 key={themeOption.value}
-                onClick={() => {
-                  setTheme(themeOption.value as any);
+                                onClick={() => {
+                  setTheme(themeOption.value as 'light' | 'dark' | 'system');
                   setIsOpen(false);
                 }}
                 className={`
