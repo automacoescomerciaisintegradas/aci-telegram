@@ -1,0 +1,24 @@
+{
+  "enabled": true,
+  "name": "Monitor de Localização",
+  "description": "Monitora as alterações em arquivos que contêm texto voltado para o usuário (como .json, .yaml ou outros arquivos de localização) no idioma principal. Quando alterações forem detectadas, identifica automaticamente o texto novo ou modificado e gera traduções para todos os idiomas-alvo configurados.",
+  "version": "1",
+  "when": {
+    "type": "fileModified",
+    "patterns": [
+      "*.json",
+      "*.yaml",
+      "*.yml",
+      "locales/**/*",
+      "i18n/**/*",
+      "translations/**/*",
+      "lang/**/*",
+      "strings/**/*",
+      "messages/**/*"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Um arquivo de localização foi modificado. Por favor, analise as alterações e:\n\n1. Identifique qualquer texto novo ou modificado voltado para o usuário\n2. Determine o idioma de origem das alterações\n3. Gere traduções precisas para todos os idiomas-alvo configurados\n4. Garanta que as traduções mantenham o contexto e significado adequados\n5. Aplique convenções de formatação específicas do local\n6. Preserve quaisquer variáveis de interpolação ou marcação\n7. Atualize os arquivos de tradução correspondentes com as novas traduções\n\nFoque em manter consistência com traduções existentes e respeitar nuances culturais para cada localidade de destino. Considere também arquivos de constantes e configurações que possam conter texto do usuário."
+  }
+}

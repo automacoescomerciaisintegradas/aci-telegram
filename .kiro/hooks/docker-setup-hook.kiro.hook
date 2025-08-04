@@ -1,0 +1,19 @@
+{
+  "enabled": true,
+  "name": "Docker Setup Generator",
+  "description": "Cria automaticamente arquivos Dockerfile e docker-compose.yml para containerizar o projeto React/Vite quando arquivos de configuração são modificados",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "package.json",
+      "vite.config.ts",
+      "tsconfig.json",
+      ".env.local"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Responda sempre em português do Brasil. Analise este projeto React/Vite com TypeScript e crie:\n\n1. Um arquivo Dockerfile otimizado para produção que:\n   - Use uma imagem Node.js apropriada\n   - Instale as dependências\n   - Faça o build da aplicação\n   - Configure um servidor web (nginx) para servir os arquivos estáticos\n   - Exponha a porta correta\n\n2. Um arquivo docker-compose.yml que:\n   - Configure o serviço da aplicação\n   - Mapeie as portas adequadamente\n   - Configure variáveis de ambiente se necessário\n   - Inclua volumes se apropriado\n\n3. Instruções em português para:\n   - Como fazer build da imagem Docker\n   - Como fazer push para o DockerHub\n   - Como executar o container localmente\n\nConsidere que este é um projeto React com Vite, TypeScript, Tailwind CSS e integração com Google Gemini AI. O projeto precisa das variáveis de ambiente do arquivo .env.local."
+  }
+}

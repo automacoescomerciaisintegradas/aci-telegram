@@ -1,0 +1,28 @@
+COMANDOS PARA COPIAR E COLAR (Após instalar Git)
+=====================================================
+
+1. CONFIGURAR GIT (substitua pelos seus dados):
+git config --global user.name "Seu Nome"
+git config --global user.email "seu@email.com"
+
+2. INICIALIZAR REPOSITÓRIO:
+git init
+git branch -M main
+
+3. ADICIONAR ARQUIVOS:
+git add .
+
+4. PRIMEIRO COMMIT:
+git commit -m "feat: projeto ACI - sistema de automações comerciais integradas - Sistema de autenticação funcionando - Dashboard completo - Integração Telegram + Shopee"
+
+5. CONECTAR COM GITHUB (substitua pela sua URL):
+git remote add origin https://github.com/SEU_USUARIO/aci-automacoes-comerciais.git
+
+6. PUSH INICIAL:
+git push -u origin main
+
+COMMITS FUTUROS:
+================
+git add .
+git commit -m "sua mensagem aqui"
+git push

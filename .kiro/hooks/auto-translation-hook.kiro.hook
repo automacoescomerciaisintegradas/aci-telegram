@@ -1,0 +1,22 @@
+{
+  "enabled": true,
+  "name": "Auto Translation Monitor",
+  "description": "Monitora as alterações em arquivos de texto voltados para o usuário (JSON, YAML e outros arquivos de localização) no idioma principal. Quando alterações são detectadas, identifica automaticamente o texto novo ou modificado e gera traduções para todos os idiomas de destino configurados, mantendo o contexto e as convenções específicas de localidade.",
+  "version": "1",
+  "when": {
+    "type": "fileCreated",
+    "patterns": [
+      "*.json",
+      "*.yaml",
+      "*.yml",
+      "locales/**/*",
+      "i18n/**/*",
+      "translations/**/*",
+      "lang/**/*"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "A localization file has been modified. Please analyze the changes and:\n\n1. Identify any new or modified user-facing text strings\n2. Determine the source language of the changes\n3. Generate accurate translations for all configured target languages\n4. Ensure translations maintain proper context and meaning\n5. Apply locale-specific formatting conventions\n6. Preserve any interpolation variables or markup\n7. Update corresponding translation files with the new translations\n\nFocus on maintaining consistency with existing translations and respecting cultural nuances for each target locale."
+  }
+}

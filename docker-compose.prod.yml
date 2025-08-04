@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  aci-app:
+    image: ${DOCKER_IMAGE:-aci-automacoes:latest}
+    container_name: aci-automacoes-prod
+    ports:
+      - "${PORT:-80}:80"
+    environment:
+      - NODE_ENV=production
+    restart: always
+    
+    # Volume para logs do nginx
+    volumes:
+      - ./logs:/var/log/nginx
+      - /etc/localtime:/etc/localtime:ro
+    
+    # Configurações de recursos para produção
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '2.0'
+        reservations:
+          memory: 1G
+          cpus: '1.0'
+    
+    # Health check otimizado para produção
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/"]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 60s
+    
+    # Configurações de segurança
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/cache/nginx
+      - /var/run
+
+# Rede customizada para produção
+networks:
+  default:
+    name: aci-prod-network
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

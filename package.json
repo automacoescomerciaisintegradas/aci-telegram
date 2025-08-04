@@ -1,0 +1,62 @@
+{
+  "name": "aci-automacoes-comerciais-integradas",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Sistema de Automações Comerciais Integradas - Shopee, Telegram e IA",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "lint:fix": "eslint . --ext ts,tsx --fix",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,css,md}\"",
+    "git:setup": "powershell -ExecutionPolicy Bypass -File scripts/git-setup.ps1",
+    "git:commit": "powershell -ExecutionPolicy Bypass -File scripts/git-commit.ps1",
+    "git:quick": "powershell -ExecutionPolicy Bypass -File scripts/quick-commit.ps1",
+    "git:update": "powershell -ExecutionPolicy Bypass -File scripts/quick-commit.ps1 update",
+    "git:fix": "powershell -ExecutionPolicy Bypass -File scripts/quick-commit.ps1 fix",
+    "git:feature": "powershell -ExecutionPolicy Bypass -File scripts/quick-commit.ps1 feature",
+    "docker:build": "docker-compose build",
+    "docker:up": "docker-compose up -d",
+    "docker:dev": "docker-compose up --build",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f",
+    "docker:prod": "docker-compose -f docker-compose.prod.yml up -d",
+    "docker:deploy": "bash scripts/docker-deploy.sh"
+  },
+  "dependencies": {
+    "@google/genai": "^1.8.0",
+    "@supabase/supabase-js": "^2.53.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.0",
+    "@types/react": "^19.1.9",
+    "@types/react-dom": "^19.1.7",
+    "@typescript-eslint/eslint-plugin": "^8.38.0",
+    "@typescript-eslint/parser": "^8.38.0",
+    "autoprefixer": "^10.4.21",
+    "eslint": "^9.32.0",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "postcss": "^8.5.6",
+    "prettier": "^3.6.2",
+    "typescript": "~5.8.2",
+    "vite": "^6.2.0"
+  },
+  "keywords": [
+    "automacao",
+    "shopee",
+    "telegram",
+    "ecommerce",
+    "afiliados",
+    "ia",
+    "react",
+    "typescript"
+  ],
+  "author": "ACI Team",
+  "license": "MIT"
+}

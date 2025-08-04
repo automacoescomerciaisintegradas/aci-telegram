@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  aci-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - NODE_ENV=production
+    image: aci-automacoes:latest
+    container_name: aci-automacoes
+    ports:
+      - "3000:80"
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
+    
+    # Volume para logs do nginx
+    volumes:
+      - ./logs:/var/log/nginx
+    
+    # Configurações de recursos otimizadas
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
+    
+    # Health check melhorado
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+# Rede customizada para isolamento
+networks:
+  default:
+    name: aci-network
+    driver: bridge

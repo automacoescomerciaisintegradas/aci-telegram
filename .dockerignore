@@ -1,0 +1,93 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Production builds (será criado durante o build)
+dist/
+build/
+
+# Environment variables (exceto .env.example)
+.env
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+.nyc_output
+
+# Dependency directories
+jspm_packages/
+
+# Optional npm cache directory
+.npm
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# parcel-bundler cache (https://parceljs.org/)
+.cache
+.parcel-cache
+
+# Docker files (não precisam estar na imagem)
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Git files
+.git/
+.gitignore
+
+# Documentation
+README.md
+docs/
+DOCKER_INSTRUCTIONS.md
+
+# Scripts de desenvolvimento
+scripts/git-*.ps1
+scripts/git-*.bat
+
+# Arquivos de teste e debug
+*-debug.tsx
+*-test.tsx
+*-simple.tsx
+*-working.tsx
+*-complete.tsx
+*-final.tsx
+*-integrated.tsx
+
+# Metadata
+metadata.json
