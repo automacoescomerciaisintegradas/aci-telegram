@@ -362,9 +362,10 @@ app.post('/refreshToken', async (req, res) => {
 app.get('/api-ml', (req, res) => {
     res.json({
         name: "API Mercado Livre",
-        version: "2.0.0",
-        description: "API para integração com Mercado Livre com gerenciamento automático de tokens",
+        version: "3.0.0",
+        description: "API completa para integração com Mercado Livre - Tokens e Orders",
         endpoints: {
+            // Autenticação
             "/": "Página inicial",
             "/api-ml": "Informações da API",
             "/generateAuthUrl": "Gerar URL de autorização com PKCE (GET)",
@@ -373,13 +374,38 @@ app.get('/api-ml', (req, res) => {
             "/tokenStatus": "Verificar status do token atual (GET)",
             "/getValidToken": "Obter token válido (renova automaticamente se necessário) (GET)",
             "/forceRenewToken": "Forçar renovação do token (POST)",
+            
+            // Gerenciamento de Orders
+            "/orders": "Listar orders do usuário com filtros (GET)",
+            "/orders/:orderId": "Obter detalhes de uma order específica (GET)",
+            "/orders/recent": "Obter orders das últimas 24 horas (GET)",
+            "/orders/by-date": "Filtrar orders por período de data (GET)",
+            "/orders/current-month": "Orders do mês atual (GET)",
+            "/orders/stats": "Estatísticas de orders (total, valores, status) (GET)",
+            "/orders/:orderId/shipping": "Detalhes de envio de uma order (GET)",
+            "/orders/example": "Exemplo de resposta JSON (GET)",
+            
+            // Utilitários
             "/test": "Página de teste"
         },
         features: [
             "Armazenamento seguro de tokens no arquivo .env",
             "Validação automática de tokens",
             "Renovação automática quando necessário",
-            "Fluxo PKCE para segurança"
+            "Fluxo PKCE para segurança",
+            "Gerenciamento completo de orders",
+            "Estatísticas e relatórios",
+            "Informações de envio",
+            "Filtros avançados de busca"
+        ],
+        orders_features: [
+            "Buscar order por ID",
+            "Listar orders com filtros (status, data, etc.)",
+            "Orders recentes (últimas 24h)",
+            "Estatísticas detalhadas",
+            "Informações de pagamento",
+            "Detalhes de envio",
+            "Breakdown por status e método de pagamento"
         ]
     });
 });
@@ -438,13 +464,488 @@ app.post('/forceRenewToken', async (req, res) => {
     }
 });
 
+// Função utilitária para processar e enviar resposta JSON
+function processarEEnviarResposta(res, dados, mensagem = '') {
+    const resposta_json = dados;
+    
+    if (mensagem) {
+        console.log(mensagem, resposta_json);
+    }
+    
+    res.json(resposta_json);
+}
+
+// ========================================
+// ROTAS PARA GERENCIAMENTO DE ORDERS
+// ========================================
+
+// Rota para obter uma order específica
+app.get('/orders/:orderId', async (req, res) => {
+    console.log(`📦 Buscando order: ${req.params.orderId}`);
+    
+    try {
+        const tokenData = await getValidToken();
+        
+        if (!tokenData.access_token) {
+            return res.status(401).json({
+                error: 'Token não disponível',
+                requires_new_authorization: true
+            });
+        }
+
+        const response = await axios.get(`https://api.mercadolibre.com/orders/${req.params.orderId}`, {
+            headers: {
+                'Authorization': `Bearer ${tokenData.access_token}`
+            },
+            timeout: 10000
+        });
+
+        // Processar e enviar resposta JSON
+        console.log(`✅ Order ${req.params.orderId} obtida com sucesso`);
+        processarEEnviarResposta(res, response.data, '📦 Resposta da API:');
+
+    } catch (error) {
+        console.error('❌ Erro ao buscar order:', error.response ? error.response.data : error.message);
+        
+        if (error.response && error.response.status === 404) {
+            res.status(404).json({
+                error: 'Order não encontrada',
+                order_id: req.params.orderId
+            });
+        } else if (error.response && error.response.status === 401) {
+            res.status(401).json({
+                error: 'Token inválido ou expirado',
+                requires_new_authorization: true
+            });
+        } else {
+            res.status(500).json({
+                error: 'Erro ao buscar order',
+                details: error.response ? error.response.data : error.message
+            });
+        }
+    }
+});
+
+// Rota para listar orders do usuário
+app.get('/orders', async (req, res) => {
+    console.log('📋 Listando orders do usuário...');
+    
+    try {
+        const tokenData = await getValidToken();
+        
+        if (!tokenData.access_token) {
+            return res.status(401).json({
+                error: 'Token não disponível',
+                requires_new_authorization: true
+            });
+        }
+
+        // Parâmetros de consulta
+        const params = new URLSearchParams();
+        if (req.query.seller) params.append('seller', req.query.seller);
+        if (req.query.buyer) params.append('buyer', req.query.buyer);
+        if (req.query.status) params.append('status', req.query.status);
+        if (req.query.offset) params.append('offset', req.query.offset);
+        if (req.query.limit) params.append('limit', req.query.limit || '50');
+        if (req.query.sort) params.append('sort', req.query.sort);
+        if (req.query.order) params.append('order', req.query.order);
+
+        const url = `https://api.mercadolibre.com/orders/search?${params.toString()}`;
+        
+        const response = await axios.get(url, {
+            headers: {
+                'Authorization': `Bearer ${tokenData.access_token}`
+            },
+            timeout: 15000
+        });
+
+        // Processar e enviar resposta JSON
+        console.log(`✅ ${response.data.results.length} orders encontradas`);
+        processarEEnviarResposta(res, response.data, '📋 Resposta da API:');
+
+    } catch (error) {
+        console.error('❌ Erro ao listar orders:', error.response ? error.response.data : error.message);
+        
+        res.status(500).json({
+            error: 'Erro ao listar orders',
+            details: error.response ? error.response.data : error.message
+        });
+    }
+});
+
+// Rota para obter orders recentes (últimas 24h)
+app.get('/orders/recent', async (req, res) => {
+    console.log('🕐 Buscando orders recentes...');
+    
+    try {
+        const tokenData = await getValidToken();
+        
+        if (!tokenData.access_token) {
+            return res.status(401).json({
+                error: 'Token não disponível',
+                requires_new_authorization: true
+            });
+        }
+
+        // Data de 24 horas atrás
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const dateFrom = yesterday.toISOString();
+
+        const params = new URLSearchParams({
+            seller: tokenData.user_id,
+            sort: 'date_desc',
+            limit: '50'
+        });
+
+        const url = `https://api.mercadolibre.com/orders/search?${params.toString()}`;
+        
+        const response = await axios.get(url, {
+            headers: {
+                'Authorization': `Bearer ${tokenData.access_token}`
+            },
+            timeout: 15000
+        });
+
+        // Filtrar orders das últimas 24h
+        const recentOrders = response.data.results.filter(order => {
+            const orderDate = new Date(order.date_created);
+            return orderDate >= yesterday;
+        });
+
+        // Processar resposta JSON para orders recentes
+        const resposta_json = {
+            ...response.data,
+            results: recentOrders,
+            total: recentOrders.length
+        };
+        
+        console.log('🕐 Resposta processada:', resposta_json);
+        console.log(`✅ ${recentOrders.length} orders recentes encontradas`);
+        
+        res.json(resposta_json);
+
+    } catch (error) {
+        console.error('❌ Erro ao buscar orders recentes:', error.response ? error.response.data : error.message);
+        
+        res.status(500).json({
+            error: 'Erro ao buscar orders recentes',
+            details: error.response ? error.response.data : error.message
+        });
+    }
+});
+
+// Rota para obter estatísticas de orders
+app.get('/orders/stats', async (req, res) => {
+    console.log('📊 Calculando estatísticas de orders...');
+    
+    try {
+        const tokenData = await getValidToken();
+        
+        if (!tokenData.access_token) {
+            return res.status(401).json({
+                error: 'Token não disponível',
+                requires_new_authorization: true
+            });
+        }
+
+        const params = new URLSearchParams({
+            seller: tokenData.user_id,
+            limit: '200'
+        });
+
+        const url = `https://api.mercadolibre.com/orders/search?${params.toString()}`;
+        
+        const response = await axios.get(url, {
+            headers: {
+                'Authorization': `Bearer ${tokenData.access_token}`
+            },
+            timeout: 15000
+        });
+
+        const orders = response.data.results;
+        
+        // Calcular estatísticas
+        const stats = {
+            total_orders: orders.length,
+            total_amount: orders.reduce((sum, order) => sum + (order.total_amount || 0), 0),
+            paid_amount: orders.reduce((sum, order) => sum + (order.paid_amount || 0), 0),
+            status_breakdown: {},
+            payment_methods: {},
+            recent_orders: 0,
+            average_order_value: 0
+        };
+
+        // Contar por status
+        orders.forEach(order => {
+            stats.status_breakdown[order.status] = (stats.status_breakdown[order.status] || 0) + 1;
+            
+            // Contar métodos de pagamento
+            if (order.payments && order.payments.length > 0) {
+                const paymentMethod = order.payments[0].payment_method_id;
+                stats.payment_methods[paymentMethod] = (stats.payment_methods[paymentMethod] || 0) + 1;
+            }
+            
+            // Orders das últimas 24h
+            const orderDate = new Date(order.date_created);
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            if (orderDate >= yesterday) {
+                stats.recent_orders++;
+            }
+        });
+
+        // Valor médio do pedido
+        if (orders.length > 0) {
+            stats.average_order_value = stats.total_amount / orders.length;
+        }
+
+        // Processar resposta JSON das estatísticas
+        const resposta_json = stats;
+        console.log('📊 Estatísticas processadas:', resposta_json);
+        console.log(`✅ Estatísticas calculadas: ${stats.total_orders} orders`);
+        
+        res.json(resposta_json);
+
+    } catch (error) {
+        console.error('❌ Erro ao calcular estatísticas:', error.response ? error.response.data : error.message);
+        
+        res.status(500).json({
+            error: 'Erro ao calcular estatísticas',
+            details: error.response ? error.response.data : error.message
+        });
+    }
+});
+
+// Rota para obter detalhes de shipping de uma order
+app.get('/orders/:orderId/shipping', async (req, res) => {
+    console.log(`🚚 Buscando shipping da order: ${req.params.orderId}`);
+    
+    try {
+        const tokenData = await getValidToken();
+        
+        if (!tokenData.access_token) {
+            return res.status(401).json({
+                error: 'Token não disponível',
+                requires_new_authorization: true
+            });
+        }
+
+        // Primeiro buscar a order para obter o shipping_id
+        const orderResponse = await axios.get(`https://api.mercadolibre.com/orders/${req.params.orderId}`, {
+            headers: {
+                'Authorization': `Bearer ${tokenData.access_token}`
+            },
+            timeout: 10000
+        });
+
+        const shippingId = orderResponse.data.shipping?.id;
+        
+        if (!shippingId) {
+            return res.json({
+                message: 'Esta order não possui informações de envio',
+                order_id: req.params.orderId
+            });
+        }
+
+        // Buscar detalhes do shipping
+        const shippingResponse = await axios.get(`https://api.mercadolibre.com/shipments/${shippingId}`, {
+            headers: {
+                'Authorization': `Bearer ${tokenData.access_token}`
+            },
+            timeout: 10000
+        });
+
+        // Processar resposta JSON do shipping
+        const resposta_json = shippingResponse.data;
+        console.log('🚚 Resposta do shipping:', resposta_json);
+        console.log(`✅ Shipping ${shippingId} obtido com sucesso`);
+        
+        res.json(resposta_json);
+
+    } catch (error) {
+        console.error('❌ Erro ao buscar shipping:', error.response ? error.response.data : error.message);
+        
+        res.status(500).json({
+            error: 'Erro ao buscar informações de envio',
+            details: error.response ? error.response.data : error.message
+        });
+    }
+});
+
+// Rota para filtrar orders por data
+app.get('/orders/by-date', async (req, res) => {
+    console.log('📅 Filtrando orders por data...');
+    
+    try {
+        const tokenData = await getValidToken();
+        
+        if (!tokenData.access_token) {
+            return res.status(401).json({
+                error: 'Token não disponível',
+                requires_new_authorization: true
+            });
+        }
+
+        // Parâmetros de data (obrigatórios)
+        const dateFrom = req.query.date_from;
+        const dateTo = req.query.date_to;
+        
+        if (!dateFrom || !dateTo) {
+            return res.status(400).json({
+                error: 'Parâmetros date_from e date_to são obrigatórios',
+                example: '/orders/by-date?date_from=2024-01-01T00:00:00.000-03:00&date_to=2024-01-31T23:59:59.000-03:00'
+            });
+        }
+
+        // Construir parâmetros da consulta
+        const params = new URLSearchParams({
+            seller: tokenData.user_id,
+            'order.date_created.from': dateFrom,
+            'order.date_created.to': dateTo,
+            limit: req.query.limit || '50',
+            offset: req.query.offset || '0'
+        });
+
+        // Adicionar filtros opcionais
+        if (req.query.status) params.append('order.status', req.query.status);
+        if (req.query.sort) params.append('sort', req.query.sort);
+
+        const url = `https://api.mercadolibre.com/orders/search?${params.toString()}`;
+        console.log('🔍 URL da consulta:', url);
+        
+        const resposta = await axios.get(url, {
+            headers: {
+                'Authorization': `Bearer ${tokenData.access_token}`
+            },
+            timeout: 15000
+        });
+
+        // Processar resposta JSON
+        const resposta_json = resposta.data;
+        console.log('📅 Resposta filtrada por data:', resposta_json);
+        console.log(`✅ ${resposta_json.results.length} orders encontradas no período`);
+        
+        // Adicionar informações do filtro na resposta
+        resposta_json.filter_info = {
+            date_from: dateFrom,
+            date_to: dateTo,
+            seller_id: tokenData.user_id,
+            total_found: resposta_json.results.length
+        };
+        
+        res.json(resposta_json);
+
+    } catch (error) {
+        console.error('❌ Erro ao filtrar por data:', error.response ? error.response.data : error.message);
+        
+        res.status(500).json({
+            error: 'Erro ao filtrar orders por data',
+            details: error.response ? error.response.data : error.message
+        });
+    }
+});
+
+// Rota para obter orders do mês atual
+app.get('/orders/current-month', async (req, res) => {
+    console.log('📅 Buscando orders do mês atual...');
+    
+    try {
+        const tokenData = await getValidToken();
+        
+        if (!tokenData.access_token) {
+            return res.status(401).json({
+                error: 'Token não disponível',
+                requires_new_authorization: true
+            });
+        }
+
+        // Calcular primeiro e último dia do mês atual
+        const now = new Date();
+        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+        const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+        
+        const dateFrom = firstDay.toISOString();
+        const dateTo = lastDay.toISOString();
+
+        const params = new URLSearchParams({
+            seller: tokenData.user_id,
+            'order.date_created.from': dateFrom,
+            'order.date_created.to': dateTo,
+            limit: '100',
+            sort: 'date_desc'
+        });
+
+        const url = `https://api.mercadolibre.com/orders/search?${params.toString()}`;
+        
+        const resposta = await axios.get(url, {
+            headers: {
+                'Authorization': `Bearer ${tokenData.access_token}`
+            },
+            timeout: 15000
+        });
+
+        // Processar resposta JSON
+        const resposta_json = resposta.data;
+        console.log('📅 Orders do mês atual:', resposta_json);
+        console.log(`✅ ${resposta_json.results.length} orders encontradas no mês atual`);
+        
+        // Adicionar informações do período
+        resposta_json.period_info = {
+            month: now.getMonth() + 1,
+            year: now.getFullYear(),
+            date_from: dateFrom,
+            date_to: dateTo,
+            total_found: resposta_json.results.length
+        };
+        
+        res.json(resposta_json);
+
+    } catch (error) {
+        console.error('❌ Erro ao buscar orders do mês:', error.response ? error.response.data : error.message);
+        
+        res.status(500).json({
+            error: 'Erro ao buscar orders do mês atual',
+            details: error.response ? error.response.data : error.message
+        });
+    }
+});
+
+// Rota de exemplo usando o padrão de resposta JSON
+app.get('/orders/example', async (req, res) => {
+    try {
+        // Simular uma resposta da API do Mercado Livre
+        const resposta = {
+            id: 2000003508419013,
+            status: "paid",
+            total_amount: 50,
+            date_created: "2022-04-08T17:01:30.000-04:00",
+            buyer: { id: 266272126 },
+            seller: { id: 478055419 }
+        };
+        
+        // Processar resposta JSON conforme seu padrão
+        const resposta_json = resposta;
+        console.log('📋 Exemplo de resposta:', resposta_json);
+        
+        res.json(resposta_json);
+        
+    } catch (error) {
+        console.error('❌ Erro no exemplo:', error);
+        res.status(500).json({ error: 'Erro no exemplo' });
+    }
+});
+
 // Rota de teste simples
 app.get('/test', (req, res) => {
-    res.json({
+    const resposta_json = {
         message: "Servidor funcionando!",
         timestamp: new Date().toISOString(),
         status: "OK"
-    });
+    };
+    
+    console.log('🧪 Teste do servidor:', resposta_json);
+    res.json(resposta_json);
 });
 
 const PORT = process.env.PORT || 3000;

@@ -1,296 +1,262 @@
-# Instruções Docker - ACI Automações Comerciais Integradas
+# 🐳 Instruções Docker - ACI (Automações Comerciais Integradas)
 
 ## 📋 Pré-requisitos
 
-- Docker instalado na máquina
-- Docker Compose instalado
-- Conta no DockerHub (para push da imagem)
+- Docker instalado (versão 20.10 ou superior)
+- Docker Compose instalado (versão 2.0 ou superior)
+- Arquivo `.env.local` configurado com suas chaves de API
 
-## 🔧 Configuração das Variáveis de Ambiente
+## 🔧 Configuração Inicial
 
-Antes de fazer o build, certifique-se de que o arquivo `.env.local` está configurado com suas chaves de API:
+### 1. Configurar Variáveis de Ambiente
+
+Copie o arquivo `.env.example` para `.env.local` e configure suas chaves:
 
 ```bash
-# Copie o arquivo de exemplo
 cp .env.example .env.local
+```
 
-# Edite com suas chaves de API
+Edite o arquivo `.env.local` com suas credenciais:
+
+```env
+# Google Gemini AI API Key (OBRIGATÓRIO)
 GEMINI_API_KEY=sua_chave_gemini_aqui
 API_KEY=sua_chave_gemini_aqui
 
-# Configurações opcionais do Supabase (se usando)
-# SUPABASE_URL=sua_url_supabase
-# SUPABASE_ANON_KEY=sua_chave_anonima_supabase
-
-# Configurações opcionais do Telegram (se usando)
-# TELEGRAM_BOT_TOKEN=seu_token_bot_telegram
-
-# Configurações opcionais do Shopee (se usando)
-# SHOPEE_PARTNER_ID=seu_partner_id_shopee
-# SHOPEE_PARTNER_KEY=sua_chave_partner_shopee
+# Outras configurações opcionais...
 ```
 
-**Importante**: Se o arquivo `.env.local` não existir, o Dockerfile automaticamente copiará o `.env.example` durante o build.
+## 🚀 Comandos Docker
 
-## 🏗️ Build da Imagem Docker
+### Desenvolvimento Local
 
-### Opção 1: Script Automatizado (Mais Fácil)
 ```bash
-# Dar permissão de execução ao script
-chmod +x scripts/docker-deploy.sh
+# Construir e executar em modo desenvolvimento
+npm run docker:dev
 
-# Executar script interativo
-bash scripts/docker-deploy.sh
-```
-
-### Opção 2: Usando Docker Compose (Recomendado)
-```bash
-# Build e execução em um comando
+# Ou usando docker-compose diretamente
 docker-compose up --build
 
-# Ou apenas build
-docker-compose build
-
-# Para produção
-docker-compose -f docker-compose.prod.yml up --build
-```
-
-### Opção 3: Usando Docker diretamente
-```bash
-# Build da imagem
-docker build -t aci-automacoes:latest .
-
-# Build com tag específica
-docker build -t aci-automacoes:v1.0.0 .
-
-# Build com argumentos personalizados
-docker build --build-arg NODE_ENV=production -t aci-automacoes:latest .
-```
-
-## 🚀 Executar Container Localmente
-
-### Usando Docker Compose (Recomendado)
-```bash
 # Executar em background
 docker-compose up -d
 
-# Executar com logs visíveis
-docker-compose up
+# Ver logs em tempo real
+docker-compose logs -f
 
 # Parar os containers
 docker-compose down
 ```
 
-### Usando Docker diretamente
+### Produção
+
 ```bash
-# Executar container
+# Executar em modo produção
+npm run docker:prod
+
+# Ou usando docker-compose diretamente
+docker-compose -f docker-compose.prod.yml up -d
+
+# Deploy completo (usando script)
+npm run docker:deploy
+```
+
+## 🏗️ Build Manual da Imagem
+
+### 1. Construir a Imagem Docker
+
+```bash
+# Build básico
+docker build -t aci-automacoes:latest .
+
+# Build com tag específica
+docker build -t aci-automacoes:v1.0.0 .
+
+# Build para produção (multi-stage)
+docker build --target production -t aci-automacoes:prod .
+```
+
+### 2. Executar Container Localmente
+
+```bash
+# Executar com variáveis de ambiente
 docker run -d \
-  --name aci-automacoes \
+  --name aci-app \
   -p 3000:80 \
+  --env-file .env.local \
   aci-automacoes:latest
 
-# Parar container
-docker stop aci-automacoes
+# Executar com porta personalizada
+docker run -d \
+  --name aci-app \
+  -p 8080:80 \
+  --env-file .env.local \
+  aci-automacoes:latest
 
-# Remover container
-docker rm aci-automacoes
+# Executar em modo interativo (para debug)
+docker run -it \
+  --name aci-app-debug \
+  -p 3000:80 \
+  --env-file .env.local \
+  aci-automacoes:latest sh
 ```
 
 ## 📤 Push para DockerHub
 
-### 1. Login no DockerHub
+### 1. Fazer Login no DockerHub
+
 ```bash
 docker login
 ```
 
-### 2. Tag da imagem com seu usuário DockerHub
+### 2. Criar Tags para o DockerHub
+
 ```bash
-# Substitua 'seuusuario' pelo seu username do DockerHub
+# Substituir 'seuusuario' pelo seu username do DockerHub
 docker tag aci-automacoes:latest seuusuario/aci-automacoes:latest
 docker tag aci-automacoes:latest seuusuario/aci-automacoes:v1.0.0
 ```
 
-### 3. Push da imagem
+### 3. Fazer Push das Imagens
+
 ```bash
 # Push da versão latest
 docker push seuusuario/aci-automacoes:latest
 
 # Push da versão específica
 docker push seuusuario/aci-automacoes:v1.0.0
+
+# Push de todas as tags
+docker push seuusuario/aci-automacoes --all-tags
 ```
 
 ## 🔍 Comandos Úteis
 
-### Verificar containers em execução
+### Monitoramento
+
 ```bash
+# Ver containers em execução
 docker ps
+
+# Ver logs do container
+docker logs aci-app
+
+# Ver logs em tempo real
+docker logs -f aci-app
+
+# Executar comandos dentro do container
+docker exec -it aci-app sh
+
+# Ver uso de recursos
+docker stats aci-app
 ```
 
-### Ver logs do container
+### Limpeza
+
 ```bash
-# Com Docker Compose
-docker-compose logs -f
+# Parar e remover container
+docker stop aci-app && docker rm aci-app
 
-# Com Docker diretamente
-docker logs -f aci-automacoes
-```
+# Remover imagem
+docker rmi aci-automacoes:latest
 
-### Acessar shell do container
-```bash
-# Com Docker Compose
-docker-compose exec aci-app sh
-
-# Com Docker diretamente
-docker exec -it aci-automacoes sh
-```
-
-### Limpar recursos Docker
-```bash
-# Remover containers parados
-docker container prune
-
-# Remover imagens não utilizadas
-docker image prune
-
-# Limpeza completa (cuidado!)
+# Limpeza geral (cuidado!)
 docker system prune -a
+
+# Remover volumes não utilizados
+docker volume prune
 ```
 
-## 🌐 Acesso à Aplicação
+## 🌐 Acessar a Aplicação
 
-Após executar o container, a aplicação estará disponível em:
-- **URL Local**: http://localhost:3000
-- **Porta**: 3000 (mapeada para porta 80 do container)
+Após executar o container, acesse:
 
-## 🔧 Troubleshooting
+- **Desenvolvimento**: http://localhost:3000
+- **Produção**: http://localhost (porta 80)
+- **Health Check**: http://localhost:3000/health
 
-### Problema: Porta já em uso
-```bash
-# Verificar qual processo está usando a porta 3000
-netstat -tulpn | grep :3000
+## 🐛 Troubleshooting
 
-# Usar porta diferente
-docker run -p 8080:80 aci-automacoes:latest
-```
+### Problemas Comuns
 
-### Problema: Build falha por falta de memória
-```bash
-# Build com mais memória
-docker build --memory=2g -t aci-automacoes:latest .
-```
+1. **Erro de API Key**:
+   - Verifique se o arquivo `.env.local` existe
+   - Confirme se a `GEMINI_API_KEY` está configurada corretamente
 
-### Problema: Variáveis de ambiente não carregam
-- Certifique-se de que o arquivo `.env.local` existe
-- As variáveis são injetadas durante o build do Vite
-- Para variáveis runtime, use docker-compose.yml
-
-## 📝 Notas Importantes
-
-1. **Node.js**: Atualizado para versão 20 LTS para melhor performance
-2. **Variáveis de Ambiente**: As chaves de API são injetadas durante o build pelo Vite
-3. **Nginx**: Configurado para servir SPA (Single Page Application) corretamente
-4. **Cache**: Arquivos estáticos têm cache de 1 ano configurado
-5. **Segurança**: Headers CSP otimizados para Google Gemini AI e APIs externas
-6. **Health Check**: Container tem verificação de saúde configurada
-7. **Recursos**: Configuração otimizada de CPU e memória para aplicações React
-8. **Dependências**: Suporte completo para @tailwindcss/postcss e outras dependências modernas
-
-## 🔄 Workflow de Deploy
-
-1. **Desenvolvimento Local**
+2. **Porta já em uso**:
    ```bash
-   npm install
-   npm run dev
+   # Verificar qual processo está usando a porta
+   netstat -tulpn | grep :3000
+   
+   # Usar porta diferente
+   docker run -p 8080:80 aci-automacoes:latest
    ```
 
-2. **Testes e Linting**
+3. **Container não inicia**:
    ```bash
-   npm run lint
-   npm run format:check
-   npm run build  # Testar build local
+   # Ver logs detalhados
+   docker logs aci-app
+   
+   # Executar em modo interativo
+   docker run -it aci-automacoes:latest sh
    ```
 
-3. **Build da Imagem Docker**
+4. **Problemas de build**:
    ```bash
-   docker-compose build
+   # Build sem cache
+   docker build --no-cache -t aci-automacoes:latest .
+   
+   # Ver logs detalhados do build
+   docker build --progress=plain -t aci-automacoes:latest .
    ```
 
-4. **Teste Local do Container**
-   ```bash
-   docker-compose up -d
-   # Testar em http://localhost:3000
-   docker-compose logs -f  # Verificar logs
-   ```
+## 📊 Otimizações de Produção
 
-5. **Tag e Push para DockerHub**
-   ```bash
-   docker tag aci-automacoes:latest seuusuario/aci-automacoes:v1.0.0
-   docker push seuusuario/aci-automacoes:v1.0.0
-   ```
+### Multi-stage Build
+O Dockerfile usa multi-stage build para:
+- Reduzir tamanho da imagem final
+- Separar dependências de desenvolvimento das de produção
+- Otimizar camadas do Docker
 
-6. **Deploy em Produção**
-   - Use a imagem do DockerHub
-   - Configure variáveis de ambiente de produção
-   - Configure proxy reverso se necessário
+### Nginx Otimizado
+- Compressão GZIP habilitada
+- Cache de arquivos estáticos
+- Configurações de segurança
+- Health check endpoint
 
-## 🚀 Deploy em Produção
+### Variáveis de Ambiente
+- Suporte a substituição em runtime
+- Configuração flexível para diferentes ambientes
+- Segurança aprimorada
 
-### Usando Docker Compose em Produção
-```bash
-# Usar arquivo de produção otimizado
-docker-compose -f docker-compose.prod.yml up -d
+## 🔒 Segurança
 
-# Com imagem específica do DockerHub
-DOCKER_IMAGE=seuusuario/aci-automacoes:v1.0.0 docker-compose -f docker-compose.prod.yml up -d
+- Headers de segurança configurados no Nginx
+- CSP (Content Security Policy) otimizado para React/Vite
+- Variáveis de ambiente protegidas
+- Health checks para monitoramento
 
-# Com porta customizada
-PORT=8080 docker-compose -f docker-compose.prod.yml up -d
-```
+## 📝 Scripts Disponíveis
 
-### Script de Deploy Automatizado
-```bash
-# Deploy completo com uma linha
-bash scripts/docker-deploy.sh
-# Escolha opção 4 para build + push automático
-```
-
-### Usando com Proxy Reverso (Nginx)
-```nginx
-server {
-    listen 80;
-    server_name seudominio.com;
-    
-    location / {
-        proxy_pass http://localhost:3000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
+```json
+{
+  "docker:build": "docker-compose build",
+  "docker:up": "docker-compose up -d",
+  "docker:dev": "docker-compose up --build",
+  "docker:down": "docker-compose down",
+  "docker:logs": "docker-compose logs -f",
+  "docker:prod": "docker-compose -f docker-compose.prod.yml up -d",
+  "docker:deploy": "bash scripts/docker-deploy.sh"
 }
 ```
 
-### Deploy com SSL (Let's Encrypt)
-```nginx
-server {
-    listen 443 ssl http2;
-    server_name seudominio.com;
-    
-    ssl_certificate /etc/letsencrypt/live/seudominio.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/seudominio.com/privkey.pem;
-    
-    location / {
-        proxy_pass http://localhost:3000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto https;
-    }
-}
+---
 
-server {
-    listen 80;
-    server_name seudominio.com;
-    return 301 https://$server_name$request_uri;
-}
-```
+## 🆘 Suporte
+
+Se encontrar problemas, verifique:
+1. Logs do container: `docker logs aci-app`
+2. Status do container: `docker ps -a`
+3. Configurações de rede: `docker network ls`
+4. Variáveis de ambiente: `docker exec aci-app env`
+
+Para mais informações, consulte a documentação oficial do Docker: https://docs.docker.com/

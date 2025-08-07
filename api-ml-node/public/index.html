@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,13 +13,15 @@
             padding: 20px;
             background-color: #f5f5f5;
         }
+
         .container {
             background: white;
             padding: 20px;
             border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             margin-bottom: 20px;
         }
+
         button {
             background-color: #007bff;
             color: white;
@@ -28,14 +31,18 @@
             cursor: pointer;
             margin: 5px;
         }
+
         button:hover {
             background-color: #0056b3;
         }
+
         button:disabled {
             background-color: #ccc;
             cursor: not-allowed;
         }
-        input, textarea {
+
+        input,
+        textarea {
             width: 100%;
             padding: 8px;
             margin: 5px 0;
@@ -43,6 +50,7 @@
             border-radius: 4px;
             box-sizing: border-box;
         }
+
         .response {
             background-color: #f8f9fa;
             border: 1px solid #dee2e6;
@@ -54,30 +62,35 @@
             max-height: 300px;
             overflow-y: auto;
         }
+
         .success {
             border-color: #28a745;
             background-color: #d4edda;
         }
+
         .error {
             border-color: #dc3545;
             background-color: #f8d7da;
         }
+
         .loading {
             color: #007bff;
         }
     </style>
 </head>
+
 <body>
     <h1>API Mercado Livre - Gerenciamento de Tokens</h1>
-    
+
     <div class="container">
         <h2>Obter Access Token com PKCE</h2>
         <p><strong>Passo 1:</strong> Gere uma URL de autorização segura:</p>
         <button onclick="generateAuthUrl()" id="generateUrlBtn">Gerar URL de Autorização</button>
         <div id="authUrlResponse" class="response" style="display: none;"></div>
-        
+
         <p><strong>Passo 2:</strong> Cole o código de autorização aqui:</p>
-        <p style="color: #dc3545; font-size: 0.9em;">⚠️ <strong>IMPORTANTE:</strong> O código de autorização expira em poucos minutos! Use rapidamente após autorizar.</p>
+        <p style="color: #dc3545; font-size: 0.9em;">⚠️ <strong>IMPORTANTE:</strong> O código de autorização expira em
+            poucos minutos! Use rapidamente após autorizar.</p>
         <input type="text" id="authCode" placeholder="Cole aqui o código de autorização (TG-xxxxxxx)">
         <input type="hidden" id="state" placeholder="State (preenchido automaticamente)">
         <input type="hidden" id="codeVerifier" placeholder="Code Verifier (preenchido automaticamente)">
@@ -102,6 +115,42 @@
     </div>
 
     <div class="container">
+        <h2>Gerenciamento de Orders</h2>
+
+        <!-- Buscar por ID -->
+        <div style="margin-bottom: 15px;">
+            <input type="text" id="orderIdInput" placeholder="ID da Order (ex: 2000003508419013)" style="width: 300px;">
+            <button onclick="getOrderById()" id="getOrderBtn">Buscar Order</button>
+        </div>
+
+        <!-- Filtros por Data -->
+        <div style="margin-bottom: 15px; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+            <h3 style="margin-top: 0;">Filtrar por Data</h3>
+            <div style="margin-bottom: 10px;">
+                <label>Data Inicial:</label>
+                <input type="datetime-local" id="dateFrom" style="margin-left: 10px;">
+                <label style="margin-left: 20px;">Data Final:</label>
+                <input type="datetime-local" id="dateTo" style="margin-left: 10px;">
+            </div>
+            <div>
+                <button onclick="getOrdersByDate()" id="dateFilterBtn">Filtrar por Data</button>
+                <button onclick="getCurrentMonthOrders()" id="currentMonthBtn">Mês Atual</button>
+                <button onclick="setLastWeek()" id="lastWeekBtn">Última Semana</button>
+                <button onclick="setToday()" id="todayBtn">Hoje</button>
+            </div>
+        </div>
+
+        <!-- Botões Gerais -->
+        <div style="margin-bottom: 15px;">
+            <button onclick="getRecentOrders()" id="recentOrdersBtn">Orders Recentes (24h)</button>
+            <button onclick="getOrderStats()" id="statsBtn">Estatísticas</button>
+            <button onclick="getAllOrders()" id="allOrdersBtn">Todas as Orders</button>
+        </div>
+
+        <div id="ordersResponse" class="response" style="display: none;"></div>
+    </div>
+
+    <div class="container">
         <h2>Tokens Salvos (.env)</h2>
         <div id="savedTokens">
             <p>Nenhum token salvo ainda.</p>
@@ -115,7 +164,7 @@
         async function generateAuthUrl() {
             const btn = document.getElementById('generateUrlBtn');
             const responseDiv = document.getElementById('authUrlResponse');
-            
+
             btn.disabled = true;
             btn.textContent = 'Gerando...';
             responseDiv.style.display = 'block';
@@ -125,7 +174,7 @@
             try {
                 const response = await fetch('/generateAuthUrl');
                 const data = await response.json();
-                
+
                 if (data.success) {
                     responseDiv.className = 'response success';
                     responseDiv.innerHTML = `✅ URL gerada com sucesso!<br><br>
@@ -135,7 +184,7 @@
                         </a><br><br>
                         <small>State: ${data.state || 'N/A'}<br>
                         Code Verifier: ${data.code_verifier ? data.code_verifier.substring(0, 20) + '...' : 'N/A'}</small>`;
-                    
+
                     // Armazena os dados para usar depois
                     if (data.state) {
                         document.getElementById('state').value = data.state;
@@ -162,12 +211,12 @@
             const authCode = document.getElementById('authCode').value;
             const state = document.getElementById('state').value;
             const codeVerifier = document.getElementById('codeVerifier').value;
-            
+
             if (!authCode) {
                 alert('Por favor, insira o código de autorização!');
                 return;
             }
-            
+
             btn.disabled = true;
             btn.textContent = 'Aguardando resposta...';
             responseDiv.style.display = 'block';
@@ -175,7 +224,7 @@
             responseDiv.textContent = 'Fazendo requisição para obter tokens com PKCE...\nAguarde a resposta do servidor...';
 
             try {
-                const requestBody = { 
+                const requestBody = {
                     code: authCode,
                     state: state,
                     code_verifier: codeVerifier
@@ -190,17 +239,17 @@
                 });
 
                 const data = await response.json();
-                
+
                 // Verifica se a resposta tem access_token (sucesso) ou error (erro)
                 if (data.access_token) {
                     responseDiv.className = 'response success';
                     responseDiv.textContent = `✅ Tokens obtidos com sucesso!\n\n${JSON.stringify(data, null, 2)}`;
-                    
+
                     // Salva os tokens
                     currentTokens = data;
                     localStorage.setItem('mlTokens', JSON.stringify(currentTokens));
                     updateSavedTokensDisplay();
-                    
+
                     // Preenche automaticamente o refresh token
                     if (data.refresh_token) {
                         document.getElementById('refreshToken').value = data.refresh_token;
@@ -208,11 +257,11 @@
                 } else {
                     responseDiv.className = 'response error';
                     let errorText = `❌ ${data.message || 'Erro!'}\n\n`;
-                    
+
                     if (data.help) {
                         errorText += `💡 Ajuda: ${data.help}\n\n`;
                     }
-                    
+
                     errorText += `Detalhes técnicos:\n${JSON.stringify(data, null, 2)}`;
                     responseDiv.textContent = errorText;
                 }
@@ -231,7 +280,7 @@
             const btn = document.getElementById('refreshBtn');
             const responseDiv = document.getElementById('refreshResponse');
             const refreshToken = document.getElementById('refreshToken').value;
-            
+
             if (!refreshToken) {
                 alert('Por favor, insira o refresh token');
                 return;
@@ -253,12 +302,12 @@
                 });
 
                 const data = await response.json();
-                
+
                 // Verifica se a resposta tem access_token (sucesso) ou error (erro)
                 if (data.access_token) {
                     responseDiv.className = 'response success';
                     responseDiv.textContent = `✅ Token renovado com sucesso!\n\n${JSON.stringify(data, null, 2)}`;
-                    
+
                     // Atualiza os tokens salvos
                     currentTokens = data;
                     localStorage.setItem('mlTokens', JSON.stringify(currentTokens));
@@ -279,7 +328,7 @@
         function updateSavedTokensDisplay() {
             const savedTokensDiv = document.getElementById('savedTokens');
             const tokens = localStorage.getItem('mlTokens');
-            
+
             if (tokens) {
                 const tokenData = JSON.parse(tokens);
                 savedTokensDiv.innerHTML = `
@@ -299,7 +348,7 @@
         async function checkTokenStatus() {
             const btn = document.getElementById('statusBtn');
             const responseDiv = document.getElementById('tokenManagementResponse');
-            
+
             btn.disabled = true;
             btn.textContent = 'Verificando...';
             responseDiv.style.display = 'block';
@@ -309,7 +358,7 @@
             try {
                 const response = await fetch('/tokenStatus');
                 const data = await response.json();
-                
+
                 responseDiv.className = data.status === 'valid' ? 'response success' : 'response error';
                 responseDiv.textContent = `Status: ${data.status.toUpperCase()}\n\n${JSON.stringify(data, null, 2)}`;
             } catch (error) {
@@ -324,7 +373,7 @@
         async function getValidToken() {
             const btn = document.getElementById('validTokenBtn');
             const responseDiv = document.getElementById('tokenManagementResponse');
-            
+
             btn.disabled = true;
             btn.textContent = 'Obtendo...';
             responseDiv.style.display = 'block';
@@ -334,7 +383,7 @@
             try {
                 const response = await fetch('/getValidToken');
                 const data = await response.json();
-                
+
                 if (data.access_token) {
                     responseDiv.className = 'response success';
                     responseDiv.textContent = `✅ Token válido obtido!\n\n${JSON.stringify(data, null, 2)}`;
@@ -354,7 +403,7 @@
         async function forceRenewToken() {
             const btn = document.getElementById('renewBtn');
             const responseDiv = document.getElementById('tokenManagementResponse');
-            
+
             btn.disabled = true;
             btn.textContent = 'Renovando...';
             responseDiv.style.display = 'block';
@@ -364,7 +413,7 @@
             try {
                 const response = await fetch('/forceRenewToken', { method: 'POST' });
                 const data = await response.json();
-                
+
                 if (data.access_token) {
                     responseDiv.className = 'response success';
                     responseDiv.textContent = `✅ Token renovado com sucesso!\n\n${JSON.stringify(data, null, 2)}`;
@@ -381,6 +430,333 @@
             }
         }
 
+        async function getOrderById() {
+            const btn = document.getElementById('getOrderBtn');
+            const responseDiv = document.getElementById('ordersResponse');
+            const orderId = document.getElementById('orderIdInput').value;
+
+            if (!orderId) {
+                alert('Por favor, insira o ID da order!');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'Buscando...';
+            responseDiv.style.display = 'block';
+            responseDiv.className = 'response loading';
+            responseDiv.textContent = `Buscando order ${orderId}...`;
+
+            try {
+                const response = await fetch(`/orders/${orderId}`);
+                const data = await response.json();
+
+                if (response.ok && data.id) {
+                    responseDiv.className = 'response success';
+                    responseDiv.innerHTML = `
+                        <strong>📦 Order ${data.id}</strong><br>
+                        <strong>Status:</strong> ${data.status}<br>
+                        <strong>Total:</strong> R$ ${data.total_amount}<br>
+                        <strong>Data:</strong> ${new Date(data.date_created).toLocaleString('pt-BR')}<br>
+                        <strong>Comprador:</strong> ${data.buyer.id}<br>
+                        <strong>Items:</strong> ${data.order_items.length}<br><br>
+                        <details>
+                            <summary>Ver JSON completo</summary>
+                            <pre>${JSON.stringify(data, null, 2)}</pre>
+                        </details>
+                    `;
+                } else {
+                    responseDiv.className = 'response error';
+                    responseDiv.textContent = `❌ ${data.error || 'Order não encontrada'}\n\n${JSON.stringify(data, null, 2)}`;
+                }
+            } catch (error) {
+                responseDiv.className = 'response error';
+                responseDiv.textContent = `❌ Erro de conexão!\n\n${error.message}`;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Buscar Order';
+            }
+        }
+
+        async function getRecentOrders() {
+            const btn = document.getElementById('recentOrdersBtn');
+            const responseDiv = document.getElementById('ordersResponse');
+
+            btn.disabled = true;
+            btn.textContent = 'Carregando...';
+            responseDiv.style.display = 'block';
+            responseDiv.className = 'response loading';
+            responseDiv.textContent = 'Buscando orders das últimas 24 horas...';
+
+            try {
+                const response = await fetch('/orders/recent');
+                const data = await response.json();
+
+                if (response.ok && data.results) {
+                    responseDiv.className = 'response success';
+                    let html = `<strong>🕐 Orders Recentes (${data.total})</strong><br><br>`;
+
+                    if (data.results.length === 0) {
+                        html += 'Nenhuma order encontrada nas últimas 24 horas.';
+                    } else {
+                        data.results.forEach(order => {
+                            html += `
+                                <div style="border: 1px solid #ddd; padding: 10px; margin: 5px 0; border-radius: 4px;">
+                                    <strong>Order:</strong> ${order.id}<br>
+                                    <strong>Status:</strong> ${order.status}<br>
+                                    <strong>Valor:</strong> R$ ${order.total_amount}<br>
+                                    <strong>Data:</strong> ${new Date(order.date_created).toLocaleString('pt-BR')}
+                                </div>
+                            `;
+                        });
+                    }
+
+                    html += `<br><details><summary>Ver JSON completo</summary><pre>${JSON.stringify(data, null, 2)}</pre></details>`;
+                    responseDiv.innerHTML = html;
+                } else {
+                    responseDiv.className = 'response error';
+                    responseDiv.textContent = `❌ ${data.error || 'Erro ao buscar orders'}\n\n${JSON.stringify(data, null, 2)}`;
+                }
+            } catch (error) {
+                responseDiv.className = 'response error';
+                responseDiv.textContent = `❌ Erro de conexão!\n\n${error.message}`;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Orders Recentes (24h)';
+            }
+        }
+
+        async function getOrderStats() {
+            const btn = document.getElementById('statsBtn');
+            const responseDiv = document.getElementById('ordersResponse');
+
+            btn.disabled = true;
+            btn.textContent = 'Calculando...';
+            responseDiv.style.display = 'block';
+            responseDiv.className = 'response loading';
+            responseDiv.textContent = 'Calculando estatísticas de orders...';
+
+            try {
+                const response = await fetch('/orders/stats');
+                const data = await response.json();
+
+                if (response.ok && data.total_orders !== undefined) {
+                    responseDiv.className = 'response success';
+                    responseDiv.innerHTML = `
+                        <strong>📊 Estatísticas de Orders</strong><br><br>
+                        <strong>Total de Orders:</strong> ${data.total_orders}<br>
+                        <strong>Valor Total:</strong> R$ ${data.total_amount.toFixed(2)}<br>
+                        <strong>Valor Pago:</strong> R$ ${data.paid_amount.toFixed(2)}<br>
+                        <strong>Ticket Médio:</strong> R$ ${data.average_order_value.toFixed(2)}<br>
+                        <strong>Orders Recentes (24h):</strong> ${data.recent_orders}<br><br>
+                        
+                        <strong>Por Status:</strong><br>
+                        ${Object.entries(data.status_breakdown).map(([status, count]) =>
+                        `• ${status}: ${count}`
+                    ).join('<br>')}<br><br>
+                        
+                        <strong>Métodos de Pagamento:</strong><br>
+                        ${Object.entries(data.payment_methods).map(([method, count]) =>
+                        `• ${method}: ${count}`
+                    ).join('<br>')}<br><br>
+                        
+                        <details>
+                            <summary>Ver JSON completo</summary>
+                            <pre>${JSON.stringify(data, null, 2)}</pre>
+                        </details>
+                    `;
+                } else {
+                    responseDiv.className = 'response error';
+                    responseDiv.textContent = `❌ ${data.error || 'Erro ao calcular estatísticas'}\n\n${JSON.stringify(data, null, 2)}`;
+                }
+            } catch (error) {
+                responseDiv.className = 'response error';
+                responseDiv.textContent = `❌ Erro de conexão!\n\n${error.message}`;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Estatísticas';
+            }
+        }
+
+        async function getAllOrders() {
+            const btn = document.getElementById('allOrdersBtn');
+            const responseDiv = document.getElementById('ordersResponse');
+
+            btn.disabled = true;
+            btn.textContent = 'Carregando...';
+            responseDiv.style.display = 'block';
+            responseDiv.className = 'response loading';
+            responseDiv.textContent = 'Buscando todas as orders...';
+
+            try {
+                const response = await fetch('/orders?limit=50');
+                const data = await response.json();
+
+                if (response.ok && data.results) {
+                    responseDiv.className = 'response success';
+                    let html = `<strong>📋 Todas as Orders (${data.paging.total})</strong><br><br>`;
+
+                    if (data.results.length === 0) {
+                        html += 'Nenhuma order encontrada.';
+                    } else {
+                        data.results.forEach(order => {
+                            html += `
+                                <div style="border: 1px solid #ddd; padding: 10px; margin: 5px 0; border-radius: 4px;">
+                                    <strong>Order:</strong> ${order.id}<br>
+                                    <strong>Status:</strong> ${order.status}<br>
+                                    <strong>Valor:</strong> R$ ${order.total_amount}<br>
+                                    <strong>Data:</strong> ${new Date(order.date_created).toLocaleString('pt-BR')}
+                                </div>
+                            `;
+                        });
+                    }
+
+                    html += `<br><details><summary>Ver JSON completo</summary><pre>${JSON.stringify(data, null, 2)}</pre></details>`;
+                    responseDiv.innerHTML = html;
+                } else {
+                    responseDiv.className = 'response error';
+                    responseDiv.textContent = `❌ ${data.error || 'Erro ao buscar orders'}\n\n${JSON.stringify(data, null, 2)}`;
+                }
+            } catch (error) {
+                responseDiv.className = 'response error';
+                responseDiv.textContent = `❌ Erro de conexão!\n\n${error.message}`;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Todas as Orders';
+            }
+        }
+
+        async function getOrdersByDate() {
+            const btn = document.getElementById('dateFilterBtn');
+            const responseDiv = document.getElementById('ordersResponse');
+            const dateFrom = document.getElementById('dateFrom').value;
+            const dateTo = document.getElementById('dateTo').value;
+
+            if (!dateFrom || !dateTo) {
+                alert('Por favor, selecione as datas inicial e final!');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'Filtrando...';
+            responseDiv.style.display = 'block';
+            responseDiv.className = 'response loading';
+            responseDiv.textContent = 'Filtrando orders por data...';
+
+            try {
+                // Converter para formato ISO com timezone
+                const dateFromISO = new Date(dateFrom).toISOString();
+                const dateToISO = new Date(dateTo).toISOString();
+
+                const response = await fetch(`/orders/by-date?date_from=${dateFromISO}&date_to=${dateToISO}`);
+                const data = await response.json();
+
+                if (response.ok && data.results) {
+                    responseDiv.className = 'response success';
+                    let html = `<strong>📅 Orders por Data (${data.total})</strong><br>`;
+                    html += `<strong>Período:</strong> ${new Date(dateFrom).toLocaleString('pt-BR')} até ${new Date(dateTo).toLocaleString('pt-BR')}<br><br>`;
+
+                    if (data.results.length === 0) {
+                        html += 'Nenhuma order encontrada no período selecionado.';
+                    } else {
+                        let totalValue = 0;
+                        data.results.forEach(order => {
+                            totalValue += order.total_amount || 0;
+                            html += `
+                                <div style="border: 1px solid #ddd; padding: 10px; margin: 5px 0; border-radius: 4px;">
+                                    <strong>Order:</strong> ${order.id}<br>
+                                    <strong>Status:</strong> ${order.status}<br>
+                                    <strong>Valor:</strong> R$ ${order.total_amount}<br>
+                                    <strong>Data:</strong> ${new Date(order.date_created).toLocaleString('pt-BR')}
+                                </div>
+                            `;
+                        });
+                        html += `<br><strong>💰 Valor Total do Período:</strong> R$ ${totalValue.toFixed(2)}`;
+                    }
+
+                    html += `<br><br><details><summary>Ver JSON completo</summary><pre>${JSON.stringify(data, null, 2)}</pre></details>`;
+                    responseDiv.innerHTML = html;
+                } else {
+                    responseDiv.className = 'response error';
+                    responseDiv.textContent = `❌ ${data.error || 'Erro ao filtrar por data'}\n\n${JSON.stringify(data, null, 2)}`;
+                }
+            } catch (error) {
+                responseDiv.className = 'response error';
+                responseDiv.textContent = `❌ Erro de conexão!\n\n${error.message}`;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Filtrar por Data';
+            }
+        }
+
+        async function getCurrentMonthOrders() {
+            const btn = document.getElementById('currentMonthBtn');
+            const responseDiv = document.getElementById('ordersResponse');
+
+            btn.disabled = true;
+            btn.textContent = 'Carregando...';
+            responseDiv.style.display = 'block';
+            responseDiv.className = 'response loading';
+            responseDiv.textContent = 'Buscando orders do mês atual...';
+
+            try {
+                const response = await fetch('/orders/current-month');
+                const data = await response.json();
+
+                if (response.ok && data.results) {
+                    responseDiv.className = 'response success';
+                    let html = `<strong>📅 Orders do Mês Atual (${data.total})</strong><br>`;
+                    html += `<strong>Período:</strong> ${data.period_info.month}/${data.period_info.year}<br><br>`;
+
+                    if (data.results.length === 0) {
+                        html += 'Nenhuma order encontrada no mês atual.';
+                    } else {
+                        let totalValue = 0;
+                        data.results.forEach(order => {
+                            totalValue += order.total_amount || 0;
+                            html += `
+                                <div style="border: 1px solid #ddd; padding: 10px; margin: 5px 0; border-radius: 4px;">
+                                    <strong>Order:</strong> ${order.id}<br>
+                                    <strong>Status:</strong> ${order.status}<br>
+                                    <strong>Valor:</strong> R$ ${order.total_amount}<br>
+                                    <strong>Data:</strong> ${new Date(order.date_created).toLocaleString('pt-BR')}
+                                </div>
+                            `;
+                        });
+                        html += `<br><strong>💰 Valor Total do Mês:</strong> R$ ${totalValue.toFixed(2)}`;
+                    }
+
+                    html += `<br><br><details><summary>Ver JSON completo</summary><pre>${JSON.stringify(data, null, 2)}</pre></details>`;
+                    responseDiv.innerHTML = html;
+                } else {
+                    responseDiv.className = 'response error';
+                    responseDiv.textContent = `❌ ${data.error || 'Erro ao buscar mês atual'}\n\n${JSON.stringify(data, null, 2)}`;
+                }
+            } catch (error) {
+                responseDiv.className = 'response error';
+                responseDiv.textContent = `❌ Erro de conexão!\n\n${error.message}`;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Mês Atual';
+            }
+        }
+
+        function setLastWeek() {
+            const now = new Date();
+            const lastWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+            document.getElementById('dateFrom').value = lastWeek.toISOString().slice(0, 16);
+            document.getElementById('dateTo').value = now.toISOString().slice(0, 16);
+        }
+
+        function setToday() {
+            const now = new Date();
+            const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59);
+
+            document.getElementById('dateFrom').value = startOfDay.toISOString().slice(0, 16);
+            document.getElementById('dateTo').value = endOfDay.toISOString().slice(0, 16);
+        }
+
         function clearTokens() {
             localStorage.removeItem('mlTokens');
             currentTokens = null;
@@ -389,7 +765,7 @@
         }
 
         // Carrega tokens salvos ao inicializar
-        window.onload = function() {
+        window.onload = function () {
             updateSavedTokensDisplay();
             const savedTokens = localStorage.getItem('mlTokens');
             if (savedTokens) {
@@ -401,4 +777,5 @@
         };
     </script>
 </body>
+
 </html>

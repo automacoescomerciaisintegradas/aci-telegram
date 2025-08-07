@@ -17,8 +17,11 @@ Sistema completo para integração com a API do Mercado Livre, incluindo gerenci
 - ✅ **Fluxo PKCE**: Implementação segura do OAuth2
 - ✅ **Gerenciamento Automático**: Validação e renovação automática de tokens
 - ✅ **Armazenamento Seguro**: Dados sensíveis protegidos no arquivo `.env`
-- ✅ **Interface Web**: Dashboard para gerenciar tokens
+- ✅ **Interface Web**: Dashboard para gerenciar tokens e orders
 - ✅ **API RESTful**: Endpoints para integração com outras aplicações
+- ✅ **Gerenciamento de Orders**: Sistema completo para pedidos do Mercado Livre
+- ✅ **Estatísticas**: Relatórios detalhados de vendas e pedidos
+- ✅ **Filtros Avançados**: Busca por status, data, comprador, etc.
 
 ## 📋 Pré-requisitos
 
@@ -172,6 +175,122 @@ Força renovação do token armazenado.
 
 #### `GET /api-ml`
 Informações da API e endpoints disponíveis.
+
+### Gerenciamento de Orders
+
+#### `GET /orders/:orderId`
+Obtém detalhes de uma order específica.
+
+**Exemplo:**
+```bash
+GET /orders/2000003508419013
+```
+
+**Resposta:**
+```json
+{
+  "id": 2000003508419013,
+  "status": "paid",
+  "total_amount": 50,
+  "date_created": "2022-04-08T17:01:30.000-04:00",
+  "buyer": {
+    "id": 266272126
+  },
+  "order_items": [...]
+}
+```
+
+#### `GET /orders`
+Lista orders do usuário com filtros opcionais.
+
+**Parâmetros de consulta:**
+- `status`: Filtrar por status (paid, cancelled, etc.)
+- `limit`: Número máximo de resultados (padrão: 50)
+- `offset`: Paginação
+- `sort`: Ordenação (date_asc, date_desc)
+
+**Exemplo:**
+```bash
+GET /orders?status=paid&limit=10
+```
+
+#### `GET /orders/recent`
+Obtém orders das últimas 24 horas.
+
+#### `GET /orders/stats`
+Estatísticas detalhadas das orders.
+
+**Resposta:**
+```json
+{
+  "total_orders": 150,
+  "total_amount": 7500.00,
+  "paid_amount": 7200.00,
+  "average_order_value": 50.00,
+  "recent_orders": 5,
+  "status_breakdown": {
+    "paid": 140,
+    "cancelled": 10
+  },
+  "payment_methods": {
+    "credit_card": 100,
+    "account_money": 50
+  }
+}
+```
+
+#### `GET /orders/by-date`
+Filtra orders por período de data.
+
+**Parâmetros obrigatórios:**
+- `date_from`: Data inicial (ISO format)
+- `date_to`: Data final (ISO format)
+
+**Parâmetros opcionais:**
+- `status`: Filtrar por status
+- `limit`: Número máximo de resultados
+- `offset`: Paginação
+
+**Exemplo:**
+```bash
+GET /orders/by-date?date_from=2024-01-01T00:00:00.000Z&date_to=2024-01-31T23:59:59.000Z
+```
+
+**Resposta:**
+```json
+{
+  "results": [...],
+  "paging": {...},
+  "filter_info": {
+    "date_from": "2024-01-01T00:00:00.000Z",
+    "date_to": "2024-01-31T23:59:59.000Z",
+    "seller_id": 478055419,
+    "total_found": 25
+  }
+}
+```
+
+#### `GET /orders/current-month`
+Obtém orders do mês atual.
+
+**Resposta:**
+```json
+{
+  "results": [...],
+  "period_info": {
+    "month": 8,
+    "year": 2025,
+    "date_from": "2025-08-01T00:00:00.000Z",
+    "date_to": "2025-08-31T23:59:59.000Z",
+    "total_found": 15
+  }
+}
+```
+
+#### `GET /orders/:orderId/shipping`
+Obtém informações de envio de uma order.
+
+### Utilitários
 
 #### `GET /test`
 Teste de conectividade do servidor.

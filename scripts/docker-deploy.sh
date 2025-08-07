@@ -1,12 +1,10 @@
 #!/bin/bash
 
-# Script de Deploy Docker para ACI - Automações Comerciais Integradas
-# Execute: bash scripts/docker-deploy.sh
+# Script de Deploy Docker para ACI (Automações Comerciais Integradas)
+# Autor: ACI Team
+# Versão: 1.0.0
 
 set -e
-
-echo "🚀 Script de Deploy Docker - ACI Automações"
-echo "============================================="
 
 # Cores para output
 RED='\033[0;31m'
@@ -15,124 +13,108 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Função para log colorido
-log_info() {
-    echo -e "${BLUE}ℹ️  $1${NC}"
-}
+# Configurações
+APP_NAME="aci-automacoes"
+DOCKER_IMAGE="$APP_NAME"
+VERSION=$(date +%Y%m%d-%H%M%S)
 
-log_success() {
-    echo -e "${GREEN}✅ $1${NC}"
-}
+echo -e "${BLUE}🚀 Iniciando deploy do ACI - Automações Comerciais Integradas${NC}"
+echo -e "${BLUE}================================================${NC}"
 
-log_warning() {
-    echo -e "${YELLOW}⚠️  $1${NC}"
-}
-
-log_error() {
-    echo -e "${RED}❌ $1${NC}"
-}
-
-# Verificar se Docker está instalado
-if ! command -v docker &> /dev/null; then
-    log_error "Docker não está instalado!"
+# Verificar se Docker está rodando
+if ! docker info > /dev/null 2>&1; then
+    echo -e "${RED}❌ Docker não está rodando. Inicie o Docker e tente novamente.${NC}"
     exit 1
 fi
 
-if ! command -v docker-compose &> /dev/null; then
-    log_error "Docker Compose não está instalado!"
-    exit 1
-fi
-
-log_success "Docker e Docker Compose encontrados"
-
-# Verificar se .env.local existe
+# Verificar se arquivo .env.local existe
 if [ ! -f ".env.local" ]; then
-    log_warning ".env.local não encontrado, copiando .env.example"
-    cp .env.example .env.local
-    log_info "Edite o arquivo .env.local com suas chaves de API antes de continuar"
-    read -p "Pressione Enter após configurar as variáveis de ambiente..."
+    echo -e "${YELLOW}⚠️  Arquivo .env.local não encontrado. Copiando de .env.example...${NC}"
+    if [ -f ".env.example" ]; then
+        cp .env.example .env.local
+        echo -e "${YELLOW}📝 Configure suas chaves de API no arquivo .env.local antes de continuar.${NC}"
+        read -p "Pressione Enter após configurar o arquivo .env.local..."
+    else
+        echo -e "${RED}❌ Arquivo .env.example não encontrado. Crie o arquivo .env.local manualmente.${NC}"
+        exit 1
+    fi
 fi
 
-# Menu de opções
-echo ""
-echo "Escolha uma opção:"
-echo "1. Build e executar localmente"
-echo "2. Build para produção"
-echo "3. Push para DockerHub"
-echo "4. Deploy completo (build + push)"
-echo "5. Parar containers"
-echo "6. Limpar recursos Docker"
+# Parar containers existentes
+echo -e "${YELLOW}🛑 Parando containers existentes...${NC}"
+docker-compose down 2>/dev/null || true
 
-read -p "Digite sua escolha (1-6): " choice
+# Limpar imagens antigas (opcional)
+read -p "Deseja remover imagens antigas? (y/N): " -n 1 -r
+echo
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    echo -e "${YELLOW}🧹 Removendo imagens antigas...${NC}"
+    docker image prune -f
+fi
 
-case $choice in
-    1)
-        log_info "Fazendo build e executando localmente..."
-        docker-compose down 2>/dev/null || true
-        docker-compose up --build -d
-        log_success "Aplicação rodando em http://localhost:3000"
-        log_info "Para ver logs: docker-compose logs -f"
-        ;;
-    2)
-        log_info "Fazendo build para produção..."
-        docker-compose build
-        log_success "Build concluído!"
-        ;;
-    3)
-        read -p "Digite seu usuário do DockerHub: " dockerhub_user
-        read -p "Digite a versão (ex: v1.0.0): " version
-        
-        log_info "Fazendo tag da imagem..."
-        docker tag aci-automacoes:latest $dockerhub_user/aci-automacoes:latest
-        docker tag aci-automacoes:latest $dockerhub_user/aci-automacoes:$version
-        
-        log_info "Fazendo push para DockerHub..."
-        docker push $dockerhub_user/aci-automacoes:latest
-        docker push $dockerhub_user/aci-automacoes:$version
-        
-        log_success "Push concluído!"
-        log_info "Imagem disponível em: $dockerhub_user/aci-automacoes:$version"
-        ;;
-    4)
-        read -p "Digite seu usuário do DockerHub: " dockerhub_user
-        read -p "Digite a versão (ex: v1.0.0): " version
-        
-        log_info "Fazendo build..."
-        docker-compose build
-        
-        log_info "Fazendo tag da imagem..."
-        docker tag aci-automacoes:latest $dockerhub_user/aci-automacoes:latest
-        docker tag aci-automacoes:latest $dockerhub_user/aci-automacoes:$version
-        
-        log_info "Fazendo push para DockerHub..."
-        docker push $dockerhub_user/aci-automacoes:latest
-        docker push $dockerhub_user/aci-automacoes:$version
-        
-        log_success "Deploy completo concluído!"
-        log_info "Imagem disponível em: $dockerhub_user/aci-automacoes:$version"
-        ;;
-    5)
-        log_info "Parando containers..."
-        docker-compose down
-        log_success "Containers parados"
-        ;;
-    6)
-        log_warning "Isso irá remover containers, imagens e volumes não utilizados"
-        read -p "Tem certeza? (y/N): " confirm
-        if [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]]; then
-            docker-compose down
-            docker system prune -f
-            docker volume prune -f
-            log_success "Limpeza concluída"
-        else
-            log_info "Operação cancelada"
-        fi
-        ;;
-    *)
-        log_error "Opção inválida"
-        exit 1
-        ;;
-esac
+# Build da nova imagem
+echo -e "${BLUE}🏗️  Construindo nova imagem...${NC}"
+docker build -t $DOCKER_IMAGE:latest -t $DOCKER_IMAGE:$VERSION .
 
-echo ""
-log_success "Script concluído!"
+if [ $? -eq 0 ]; then
+    echo -e "${GREEN}✅ Build concluído com sucesso!${NC}"
+else
+    echo -e "${RED}❌ Erro no build da imagem.${NC}"
+    exit 1
+fi
+
+# Executar em modo produção
+echo -e "${BLUE}🚀 Iniciando aplicação em modo produção...${NC}"
+docker-compose -f docker-compose.prod.yml up -d
+
+# Aguardar inicialização
+echo -e "${YELLOW}⏳ Aguardando inicialização da aplicação...${NC}"
+sleep 10
+
+# Verificar se a aplicação está rodando
+if docker ps | grep -q $APP_NAME; then
+    echo -e "${GREEN}✅ Aplicação iniciada com sucesso!${NC}"
+    
+    # Health check
+    echo -e "${BLUE}🔍 Verificando saúde da aplicação...${NC}"
+    if curl -f http://localhost/health > /dev/null 2>&1; then
+        echo -e "${GREEN}✅ Health check passou!${NC}"
+    else
+        echo -e "${YELLOW}⚠️  Health check falhou, mas a aplicação pode estar iniciando...${NC}"
+    fi
+    
+    echo -e "${GREEN}🎉 Deploy concluído com sucesso!${NC}"
+    echo -e "${BLUE}📱 Acesse a aplicação em: http://localhost${NC}"
+    echo -e "${BLUE}📊 Logs: docker-compose -f docker-compose.prod.yml logs -f${NC}"
+    
+else
+    echo -e "${RED}❌ Erro ao iniciar a aplicação.${NC}"
+    echo -e "${YELLOW}📋 Verificando logs...${NC}"
+    docker-compose -f docker-compose.prod.yml logs --tail=20
+    exit 1
+fi
+
+# Mostrar status dos containers
+echo -e "${BLUE}📊 Status dos containers:${NC}"
+docker ps --filter "name=$APP_NAME"
+
+# Opção para fazer push para DockerHub
+echo
+read -p "Deseja fazer push da imagem para o DockerHub? (y/N): " -n 1 -r
+echo
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    read -p "Digite seu username do DockerHub: " DOCKER_USERNAME
+    if [ ! -z "$DOCKER_USERNAME" ]; then
+        echo -e "${BLUE}📤 Fazendo push para DockerHub...${NC}"
+        docker tag $DOCKER_IMAGE:latest $DOCKER_USERNAME/$DOCKER_IMAGE:latest
+        docker tag $DOCKER_IMAGE:latest $DOCKER_USERNAME/$DOCKER_IMAGE:$VERSION
+        
+        docker push $DOCKER_USERNAME/$DOCKER_IMAGE:latest
+        docker push $DOCKER_USERNAME/$DOCKER_IMAGE:$VERSION
+        
+        echo -e "${GREEN}✅ Push concluído!${NC}"
+        echo -e "${BLUE}🐳 Imagem disponível em: $DOCKER_USERNAME/$DOCKER_IMAGE:latest${NC}"
+    fi
+fi
+
+echo -e "${GREEN}🎊 Deploy finalizado!${NC}"
