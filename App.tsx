@@ -1,104 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { AdminPage } from './components/AdminPage-simple';
 import { TelegramShopeePage } from './components/TelegramShopeePage-working';
-import { AuthPage } from './components/AuthPage-simple';
-import { authService, User, Session } from './services/authService';
+import { AuthSystem } from './components/AuthSystem';
+import { UserSidebar } from './components/UserSidebar';
+import { CreditPlans } from './components/CreditPlans';
+import { CheckoutPix } from './components/CheckoutPix';
 
-// Componente de informações do usuário
-const UserInfo: React.FC<{ user: User; onLogout: () => void }> = ({ user, onLogout }) => (
-  <div className="flex items-center gap-3">
-    {user.avatar_url && (
-      <img
-        src={user.avatar_url}
-        alt={user.name || user.email}
-        className="w-8 h-8 rounded-full"
-      />
-    )}
-    <div className="flex flex-col">
-      <span className="text-sm font-medium text-dark-text-primary">
-        {user.name || user.email.split('@')[0]}
-      </span>
-      <span className="text-xs text-dark-text-secondary">
-        {user.provider === 'google' ? '🔗 Google' : '📧 Email'}
-      </span>
-    </div>
-    <button
-      onClick={onLogout}
-      className="ml-2 text-xs bg-red-600 hover:bg-red-500 text-white px-2 py-1 rounded transition-colors"
-      title="Sair"
-    >
-      Sair
-    </button>
-  </div>
-);
+type Page = 'admin' | 'telegram-shopee' | 'telegram' | 'topsales' | 'search' | 'generate' | 'image' | 'chat';
+type AuthState = 'login' | 'authenticated' | 'credits' | 'checkout';
 
-// Sidebar simples
-const Sidebar: React.FC<{ 
-  activePage: string; 
-  onNavigate: (page: string) => void; 
-  user: User;
-  onLogout: () => void;
-}> = ({ 
-  activePage, 
-  onNavigate, 
-  user,
-  onLogout 
-}) => {
-  const menuItems = [
-    { id: 'telegram-shopee', label: 'Telegram - Ofertas Shopee', icon: '🛒' },
-    { id: 'telegram', label: 'Disparador Telegram', icon: '📱' },
-    { id: 'topsales', label: 'Top Vendas Shopee', icon: '📈' },
-    { id: 'search', label: 'Pesquisar Produto', icon: '🔍' },
-    { id: 'generate', label: 'Gerar Link Direto', icon: '🔗' },
-    { id: 'image', label: 'Gerar Imagem', icon: '🖼️' },
-    { id: 'chat', label: 'Chat IA', icon: '💬' },
-    { id: 'admin', label: 'Admin', icon: '⚙️' }
-  ];
-
-  return (
-    <div className="w-64 bg-dark-card border-r border-dark-border h-screen flex flex-col">
-      {/* Logo */}
-      <div className="p-6 border-b border-dark-border">
-        <h1 className="text-2xl font-bold text-brand-primary">ACI</h1>
-      </div>
-
-      {/* Menu Items */}
-      <div className="flex-1 p-4">
-        <nav className="space-y-2">
-          {menuItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => onNavigate(item.id)}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-colors ${
-                activePage === item.id
-                  ? 'bg-brand-primary text-white'
-                  : 'text-dark-text-secondary hover:bg-slate-700/50 hover:text-dark-text-primary'
-              }`}
-            >
-              <span className="text-lg">{item.icon}</span>
-              <span className="text-sm font-medium">{item.label}</span>
-            </button>
-          ))}
-        </nav>
-      </div>
-
-      {/* User Info & Credits */}
-      <div className="p-4 border-t border-dark-border space-y-3">
-        <UserInfo user={user} onLogout={onLogout} />
-        
-        <div className="bg-slate-800/50 rounded-lg p-3">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-dark-text-secondary">Créditos</span>
-            <span className="text-sm font-bold text-brand-primary">1.250 / 5.000</span>
-          </div>
-          <div className="w-full bg-slate-700 rounded-full h-2 mt-2">
-            <div className="bg-brand-primary h-2 rounded-full" style={{ width: '25%' }}></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  credits: number;
+  avatar: string;
+}
 
 // Placeholder para outras páginas
 const PlaceholderPage: React.FC<{ title: string; description?: string }> = ({ title, description }) => {
@@ -195,50 +112,161 @@ const PlaceholderPage: React.FC<{ title: string; description?: string }> = ({ ti
   );
 };
 
+// Sidebar principal da aplicação
+const MainSidebar: React.FC<{ 
+  activePage: Page; 
+  onNavigate: (page: Page) => void; 
+  onToggleUserSidebar: () => void;
+  user: User;
+}> = ({ 
+  activePage, 
+  onNavigate, 
+  onToggleUserSidebar,
+  user
+}) => {
+  const menuItems = [
+    { id: 'telegram-shopee' as Page, label: 'Telegram - Ofertas Shopee', icon: '🛒' },
+    { id: 'telegram' as Page, label: 'Disparador Telegram', icon: '📱' },
+    { id: 'topsales' as Page, label: 'Top Vendas Shopee', icon: '📈' },
+    { id: 'search' as Page, label: 'Pesquisar Produto', icon: '🔍' },
+    { id: 'generate' as Page, label: 'Gerar Link Direto', icon: '🔗' },
+    { id: 'image' as Page, label: 'Gerar Imagem', icon: '🖼️' },
+    { id: 'chat' as Page, label: 'Chat IA', icon: '💬' },
+    { id: 'admin' as Page, label: 'Admin', icon: '⚙️' }
+  ];
+
+  return (
+    <div className="w-64 bg-dark-card border-r border-dark-border h-screen flex flex-col">
+      {/* Logo */}
+      <div className="p-6 border-b border-dark-border">
+        <h1 className="text-2xl font-bold text-brand-primary">ACI</h1>
+      </div>
+
+      {/* Menu Items */}
+      <div className="flex-1 p-4">
+        <nav className="space-y-2">
+          {menuItems.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => onNavigate(item.id)}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-colors ${
+                activePage === item.id
+                  ? 'bg-brand-primary text-white'
+                  : 'text-dark-text-secondary hover:bg-slate-700/50 hover:text-dark-text-primary'
+              }`}
+            >
+              <span className="text-lg">{item.icon}</span>
+              <span className="text-sm font-medium">{item.label}</span>
+            </button>
+          ))}
+        </nav>
+      </div>
+
+      {/* User Info & Credits */}
+      <div className="p-4 border-t border-dark-border">
+        <button
+          onClick={onToggleUserSidebar}
+          className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-slate-700/50 transition-colors"
+        >
+          <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold">
+            {user.avatar}
+          </div>
+          <div className="flex-1 text-left">
+            <div className="text-sm font-medium text-dark-text-primary">{user.name}</div>
+            <div className="text-xs text-green-400">R$ {user.credits.toFixed(2)}</div>
+          </div>
+          <svg className="w-4 h-4 text-dark-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  );
+};
+
 const App: React.FC = () => {
-  const [session, setSession] = useState<Session | null>(null);
-  const [activePage, setActivePage] = useState('admin');
-  const [isLoading, setIsLoading] = useState(true);
+  const [authState, setAuthState] = useState<AuthState>('login');
+  const [user, setUser] = useState<User | null>(null);
+  const [activePage, setActivePage] = useState<Page>('admin');
+  const [showUserSidebar, setShowUserSidebar] = useState(false);
+  const [selectedAmount, setSelectedAmount] = useState<number>(0);
 
-  // Monitorar estado da sessão
-  useEffect(() => {
-    const unsubscribe = authService.onAuthStateChange((newSession) => {
-      setSession(newSession);
-      setIsLoading(false);
-    });
-
-    return unsubscribe;
-  }, []);
-
-  const handleLogin = () => {
-    // O authService já gerencia o estado da sessão
-    // Não precisamos fazer nada aqui
+  const handleLogin = (userData: User) => {
+    setUser(userData);
+    setAuthState('authenticated');
   };
 
-  const handleLogout = async () => {
-    setIsLoading(true);
-    await authService.signOut();
+  const handleLogout = () => {
+    setUser(null);
+    setAuthState('login');
+    setShowUserSidebar(false);
     setActivePage('admin');
   };
 
-  // Loading state
-  if (isLoading) {
+  const handleAddCredits = () => {
+    setAuthState('credits');
+    setShowUserSidebar(false);
+  };
+
+  const handleSelectPlan = (amount: number) => {
+    setSelectedAmount(amount);
+    setAuthState('checkout');
+  };
+
+  const handlePaymentConfirm = () => {
+    if (user) {
+      // Simular adição de créditos
+      const bonus = selectedAmount * 0.2;
+      const newCredits = user.credits + selectedAmount + bonus;
+      
+      setUser({
+        ...user,
+        credits: newCredits
+      });
+      
+      setAuthState('authenticated');
+      setSelectedAmount(0);
+      
+      // Simular notificação de sucesso
+      alert(`Pagamento confirmado! R$ ${(selectedAmount + bonus).toFixed(2)} foram adicionados à sua conta.`);
+    }
+  };
+
+  const handleBackToCredits = () => {
+    setAuthState('credits');
+  };
+
+  const handleBackToApp = () => {
+    setAuthState('authenticated');
+  };
+
+  // Tela de login
+  if (authState === 'login') {
+    return <AuthSystem onLogin={handleLogin} />;
+  }
+
+  // Tela de seleção de créditos
+  if (authState === 'credits') {
     return (
-      <div className="min-h-screen bg-dark-bg flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-brand-primary border-t-transparent mx-auto mb-4"></div>
-          <p className="text-dark-text-secondary">Carregando...</p>
-        </div>
-      </div>
+      <CreditPlans 
+        onSelectPlan={handleSelectPlan}
+        onBack={handleBackToApp}
+      />
     );
   }
 
-  // Not authenticated
-  if (!session) {
-    return <AuthPage onLoginSuccess={handleLogin} />;
+  // Tela de checkout
+  if (authState === 'checkout') {
+    return (
+      <CheckoutPix 
+        amount={selectedAmount}
+        onBack={handleBackToCredits}
+        onPaymentConfirm={handlePaymentConfirm}
+      />
+    );
   }
 
-  const user = session.user;
+  // Aplicação principal
 
   const renderPage = () => {
     switch (activePage) {
@@ -283,13 +311,24 @@ const App: React.FC = () => {
 
   return (
     <div className="flex h-screen bg-dark-bg text-dark-text-primary">
-      <Sidebar 
+      <MainSidebar 
         activePage={activePage} 
         onNavigate={setActivePage}
-        user={user}
-        onLogout={handleLogout} 
+        onToggleUserSidebar={() => setShowUserSidebar(!showUserSidebar)}
+        user={user!}
       />
-      {renderPage()}
+      
+      {showUserSidebar && (
+        <UserSidebar 
+          user={user!}
+          onAddCredits={handleAddCredits}
+          onLogout={handleLogout}
+        />
+      )}
+      
+      <div className="flex-1">
+        {renderPage()}
+      </div>
     </div>
   );
 };
