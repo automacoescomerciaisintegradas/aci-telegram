@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Mercado Livre - Tokens</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .response {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            margin-top: 10px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .success {
+            border-color: #28a745;
+            background-color: #d4edda;
+        }
+        .error {
+            border-color: #dc3545;
+            background-color: #f8d7da;
+        }
+        .loading {
+            color: #007bff;
+        }
+    </style>
+</head>
+<body>
+    <h1>API Mercado Livre - Gerenciamento de Tokens</h1>
+    
+    <div class="container">
+        <h2>Obter Access Token com PKCE</h2>
+        <p><strong>Passo 1:</strong> Gere uma URL de autorização segura:</p>
+        <button onclick="generateAuthUrl()" id="generateUrlBtn">Gerar URL de Autorização</button>
+        <div id="authUrlResponse" class="response" style="display: none;"></div>
+        
+        <p><strong>Passo 2:</strong> Cole o código de autorização aqui:</p>
+        <p style="color: #dc3545; font-size: 0.9em;">⚠️ <strong>IMPORTANTE:</strong> O código de autorização expira em poucos minutos! Use rapidamente após autorizar.</p>
+        <input type="text" id="authCode" placeholder="Cole aqui o código de autorização (TG-xxxxxxx)">
+        <input type="hidden" id="state" placeholder="State (preenchido automaticamente)">
+        <input type="hidden" id="codeVerifier" placeholder="Code Verifier (preenchido automaticamente)">
+        <button onclick="getAccessToken()" id="getTokenBtn">Obter Tokens</button>
+        <div id="tokenResponse" class="response" style="display: none;"></div>
+    </div>
+
+    <div class="container">
+        <h2>Renovar Access Token</h2>
+        <p>Use o refresh_token para obter um novo access_token:</p>
+        <input type="text" id="refreshToken" placeholder="Refresh Token">
+        <button onclick="refreshAccessToken()" id="refreshBtn">Renovar Token</button>
+        <div id="refreshResponse" class="response" style="display: none;"></div>
+    </div>
+
+    <div class="container">
+        <h2>Gerenciamento Automático de Tokens</h2>
+        <button onclick="checkTokenStatus()" id="statusBtn">Verificar Status do Token</button>
+        <button onclick="getValidToken()" id="validTokenBtn">Obter Token Válido</button>
+        <button onclick="forceRenewToken()" id="renewBtn">Forçar Renovação</button>
+        <div id="tokenManagementResponse" class="response" style="display: none;"></div>
+    </div>
+
+    <div class="container">
+        <h2>Tokens Salvos (.env)</h2>
+        <div id="savedTokens">
+            <p>Nenhum token salvo ainda.</p>
+        </div>
+        <button onclick="clearTokens()">Limpar Tokens</button>
+    </div>
+
+    <script>
+        let currentTokens = null;
+
+        async function generateAuthUrl() {
+            const btn = document.getElementById('generateUrlBtn');
+            const responseDiv = document.getElementById('authUrlResponse');
+            
+            btn.disabled = true;
+            btn.textContent = 'Gerando...';
+            responseDiv.style.display = 'block';
+            responseDiv.className = 'response loading';
+            responseDiv.textContent = 'Gerando URL de autorização com PKCE...';
+
+            try {
+                const response = await fetch('/generateAuthUrl');
+                const data = await response.json();
+                
+                if (data.success) {
+                    responseDiv.className = 'response success';
+                    responseDiv.innerHTML = `✅ URL gerada com sucesso!<br><br>
+                        <strong>Clique no link abaixo para autorizar:</strong><br>
+                        <a href="${data.authUrl}" target="_blank" style="color: #007bff; text-decoration: underline;">
+                            Autorizar Aplicação no Mercado Livre
+                        </a><br><br>
+                        <small>State: ${data.state || 'N/A'}<br>
+                        Code Verifier: ${data.code_verifier ? data.code_verifier.substring(0, 20) + '...' : 'N/A'}</small>`;
+                    
+                    // Armazena os dados para usar depois
+                    if (data.state) {
+                        document.getElementById('state').value = data.state;
+                    }
+                    if (data.code_verifier) {
+                        document.getElementById('codeVerifier').value = data.code_verifier;
+                    }
+                } else {
+                    responseDiv.className = 'response error';
+                    responseDiv.textContent = `❌ Erro ao gerar URL!\n\n${JSON.stringify(data, null, 2)}`;
+                }
+            } catch (error) {
+                responseDiv.className = 'response error';
+                responseDiv.textContent = `❌ Erro de conexão!\n\n${error.message}`;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Gerar URL de Autorização';
+            }
+        }
+
+        async function getAccessToken() {
+            const btn = document.getElementById('getTokenBtn');
+            const responseDiv = document.getElementById('tokenResponse');
+            const authCode = document.getElementById('authCode').value;
+            const state = document.getElementById('state').value;
+            const codeVerifier = document.getElementById('codeVerifier').value;
+            
+            if (!authCode) {
+                alert('Por favor, insira o código de autorização!');
+                return;
+            }
+            
+            btn.disabled = true;
+            btn.textContent = 'Aguardando resposta...';
+            responseDiv.style.display = 'block';
+            responseDiv.className = 'response loading';
+            responseDiv.textContent = 'Fazendo requisição para obter tokens com PKCE...\nAguarde a resposta do servidor...';
+
+            try {
+                const requestBody = { 
+                    code: authCode,
+                    state: state,
+                    code_verifier: codeVerifier
+                };
+
+                const response = await fetch('/getAccessToken', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+
+                const data = await response.json();
+                
+                // Verifica se a resposta tem access_token (sucesso) ou error (erro)
+                if (data.access_token) {
+                    responseDiv.className = 'response success';
+                    responseDiv.textContent = `✅ Tokens obtidos com sucesso!\n\n${JSON.stringify(data, null, 2)}`;
+                    
+                    // Salva os tokens
+                    currentTokens = data;
+                    localStorage.setItem('mlTokens', JSON.stringify(currentTokens));
+                    updateSavedTokensDisplay();
+                    
+                    // Preenche automaticamente o refresh token
+                    if (data.refresh_token) {
+                        document.getElementById('refreshToken').value = data.refresh_token;
+                    }
+                } else {
+                    responseDiv.className = 'response error';
+                    let errorText = `❌ ${data.message || 'Erro!'}\n\n`;
+                    
+                    if (data.help) {
+                        errorText += `💡 Ajuda: ${data.help}\n\n`;
+                    }
+                    
+                    errorText += `Detalhes técnicos:\n${JSON.stringify(data, null, 2)}`;
+                    responseDiv.textContent = errorText;
+                }
+            } catch (error) {
+                responseDiv.className = 'response error';
+                responseDiv.textContent = `❌ Erro de conexão!\n\n${error.message}`;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Obter Tokens';
+            }
+        }
+
+
+
+        async function refreshAccessToken() {
+            const btn = document.getElementById('refreshBtn');
+            const responseDiv = document.getElementById('refreshResponse');
+            const refreshToken = document.getElementById('refreshToken').value;
+            
+            if (!refreshToken) {
+                alert('Por favor, insira o refresh token');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'Renovando...';
+            responseDiv.style.display = 'block';
+            responseDiv.className = 'response loading';
+            responseDiv.textContent = 'Renovando access token...\nAguarde a resposta do servidor...';
+
+            try {
+                const response = await fetch('/refreshToken', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ refresh_token: refreshToken })
+                });
+
+                const data = await response.json();
+                
+                // Verifica se a resposta tem access_token (sucesso) ou error (erro)
+                if (data.access_token) {
+                    responseDiv.className = 'response success';
+                    responseDiv.textContent = `✅ Token renovado com sucesso!\n\n${JSON.stringify(data, null, 2)}`;
+                    
+                    // Atualiza os tokens salvos
+                    currentTokens = data;
+                    localStorage.setItem('mlTokens', JSON.stringify(currentTokens));
+                    updateSavedTokensDisplay();
+                } else {
+                    responseDiv.className = 'response error';
+                    responseDiv.textContent = `❌ Erro ao renovar!\n\n${JSON.stringify(data, null, 2)}`;
+                }
+            } catch (error) {
+                responseDiv.className = 'response error';
+                responseDiv.textContent = `❌ Erro de conexão!\n\n${error.message}`;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Renovar Token';
+            }
+        }
+
+        function updateSavedTokensDisplay() {
+            const savedTokensDiv = document.getElementById('savedTokens');
+            const tokens = localStorage.getItem('mlTokens');
+            
+            if (tokens) {
+                const tokenData = JSON.parse(tokens);
+                savedTokensDiv.innerHTML = `
+                    <div class="response success">
+                        <strong>Tokens Atuais:</strong><br>
+                        Access Token: ${tokenData.access_token ? tokenData.access_token.substring(0, 20) + '...' : 'N/A'}<br>
+                        Refresh Token: ${tokenData.refresh_token ? tokenData.refresh_token.substring(0, 20) + '...' : 'N/A'}<br>
+                        Expira em: ${tokenData.expires_in} segundos<br>
+                        Salvo em: ${tokenData.timestamp}
+                    </div>
+                `;
+            } else {
+                savedTokensDiv.innerHTML = '<p>Nenhum token salvo ainda.</p>';
+            }
+        }
+
+        async function checkTokenStatus() {
+            const btn = document.getElementById('statusBtn');
+            const responseDiv = document.getElementById('tokenManagementResponse');
+            
+            btn.disabled = true;
+            btn.textContent = 'Verificando...';
+            responseDiv.style.display = 'block';
+            responseDiv.className = 'response loading';
+            responseDiv.textContent = 'Verificando status do token...';
+
+            try {
+                const response = await fetch('/tokenStatus');
+                const data = await response.json();
+                
+                responseDiv.className = data.status === 'valid' ? 'response success' : 'response error';
+                responseDiv.textContent = `Status: ${data.status.toUpperCase()}\n\n${JSON.stringify(data, null, 2)}`;
+            } catch (error) {
+                responseDiv.className = 'response error';
+                responseDiv.textContent = `❌ Erro de conexão!\n\n${error.message}`;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Verificar Status do Token';
+            }
+        }
+
+        async function getValidToken() {
+            const btn = document.getElementById('validTokenBtn');
+            const responseDiv = document.getElementById('tokenManagementResponse');
+            
+            btn.disabled = true;
+            btn.textContent = 'Obtendo...';
+            responseDiv.style.display = 'block';
+            responseDiv.className = 'response loading';
+            responseDiv.textContent = 'Obtendo token válido (renovando se necessário)...';
+
+            try {
+                const response = await fetch('/getValidToken');
+                const data = await response.json();
+                
+                if (data.access_token) {
+                    responseDiv.className = 'response success';
+                    responseDiv.textContent = `✅ Token válido obtido!\n\n${JSON.stringify(data, null, 2)}`;
+                } else {
+                    responseDiv.className = 'response error';
+                    responseDiv.textContent = `❌ ${data.error}\n\nÉ necessário fazer nova autorização.`;
+                }
+            } catch (error) {
+                responseDiv.className = 'response error';
+                responseDiv.textContent = `❌ Erro de conexão!\n\n${error.message}`;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Obter Token Válido';
+            }
+        }
+
+        async function forceRenewToken() {
+            const btn = document.getElementById('renewBtn');
+            const responseDiv = document.getElementById('tokenManagementResponse');
+            
+            btn.disabled = true;
+            btn.textContent = 'Renovando...';
+            responseDiv.style.display = 'block';
+            responseDiv.className = 'response loading';
+            responseDiv.textContent = 'Forçando renovação do token...';
+
+            try {
+                const response = await fetch('/forceRenewToken', { method: 'POST' });
+                const data = await response.json();
+                
+                if (data.access_token) {
+                    responseDiv.className = 'response success';
+                    responseDiv.textContent = `✅ Token renovado com sucesso!\n\n${JSON.stringify(data, null, 2)}`;
+                } else {
+                    responseDiv.className = 'response error';
+                    responseDiv.textContent = `❌ ${data.error}\n\nÉ necessário fazer nova autorização.`;
+                }
+            } catch (error) {
+                responseDiv.className = 'response error';
+                responseDiv.textContent = `❌ Erro de conexão!\n\n${error.message}`;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Forçar Renovação';
+            }
+        }
+
+        function clearTokens() {
+            localStorage.removeItem('mlTokens');
+            currentTokens = null;
+            updateSavedTokensDisplay();
+            document.getElementById('refreshToken').value = '';
+        }
+
+        // Carrega tokens salvos ao inicializar
+        window.onload = function() {
+            updateSavedTokensDisplay();
+            const savedTokens = localStorage.getItem('mlTokens');
+            if (savedTokens) {
+                const tokenData = JSON.parse(savedTokens);
+                if (tokenData.refresh_token) {
+                    document.getElementById('refreshToken').value = tokenData.refresh_token;
+                }
+            }
+        };
+    </script>
+</body>
+</html>
