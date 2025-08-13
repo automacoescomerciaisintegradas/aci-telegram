@@ -1,22 +1,36 @@
-import React from 'react';
+import React, { useState } from 'react';
 
-const AppSimple: React.FC = () => {
-  return (
-    <div className="min-h-screen bg-dark-bg text-dark-text-primary p-8">
-      <h1 className="text-3xl font-bold mb-4">🚀 ACI - Sistema Funcionando</h1>
-      <p className="text-lg mb-4">Se você está vendo esta mensagem, o React está funcionando!</p>
-      
-      <div className="bg-dark-card border border-dark-border p-6 rounded-lg">
-        <h2 className="text-xl font-semibold mb-4">Teste Básico</h2>
-        <button 
-          className="bg-brand-primary text-white px-4 py-2 rounded hover:bg-blue-600"
-          onClick={() => alert('Botão funcionando!')}
-        >
-          Testar Interação
-        </button>
+const App: React.FC = () => {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  if (!isLoggedIn) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="bg-gray-800 p-8 rounded-lg">
+          <h1 className="text-white text-2xl mb-4">ACI - Login</h1>
+          <button 
+            onClick={() => setIsLoggedIn(true)}
+            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+          >
+            Entrar
+          </button>
+        </div>
       </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-900 text-white p-8">
+      <h1 className="text-3xl mb-4">ACI Dashboard</h1>
+      <p>Aplicação funcionando!</p>
+      <button 
+        onClick={() => setIsLoggedIn(false)}
+        className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 mt-4"
+      >
+        Sair
+      </button>
     </div>
   );
 };
 
-export default AppSimple;
+export default App;

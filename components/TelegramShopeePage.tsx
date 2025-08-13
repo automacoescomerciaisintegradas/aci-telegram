@@ -1,8 +1,8 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { getShopeeProductDetailsFromUrl, generateShopeeOfferMessageFromApi, Product, generateShopeeLinkFromApi } from '../services/geminiService';
 import { SearchIcon, MagicWandIcon, SpinnerIcon, AlertTriangleIcon, TelegramIcon } from './Icons';
-import ShopeeLinkShortener from './ShopeeLinkShortener';
 import { notificationService } from '../services/notificationService';
+import { shopeeAffiliateService } from '../services/shopeeAffiliateService';
 
 export const TelegramShopeePage: React.FC = () => {
     const [botToken, setBotToken] = useState('');
@@ -16,6 +16,30 @@ export const TelegramShopeePage: React.FC = () => {
     const [isLoadingMessage, setIsLoadingMessage] = useState(false);
     const [isSending, setIsSending] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [isTesting, setIsTesting] = useState(false);
+    const [foundChats, setFoundChats] = useState<any[]>([]);
+    const [showChatList, setShowChatList] = useState(false);
+
+    // Persistir configurações básicas no localStorage
+    useEffect(() => {
+        try {
+            const raw = localStorage.getItem('aci_api_config') || '{}';
+            const cfg = JSON.parse(raw);
+            setBotToken(cfg.telegramBotToken || '');
+            setChatId(cfg.lastChatId || '');
+            setAffiliateId(cfg.telegramAffiliateId || '');
+        } catch {}
+    }, []);
+
+    useEffect(() => {
+        const raw = localStorage.getItem('aci_api_config') || '{}';
+        let cfg: any = {};
+        try { cfg = JSON.parse(raw); } catch { cfg = {}; }
+        cfg.telegramBotToken = botToken;
+        cfg.telegramAffiliateId = affiliateId;
+        cfg.lastChatId = chatId;
+        localStorage.setItem('aci_api_config', JSON.stringify(cfg));
+    }, [botToken, affiliateId, chatId]);
 
     const handleFetchProduct = useCallback(async () => {
         if (!productUrl.trim()) {
@@ -88,7 +112,19 @@ export const TelegramShopeePage: React.FC = () => {
         setIsSending(true);
         setError(null);
         try {
-            const affiliateLink = await generateShopeeLinkFromApi(productDetails.product_url, affiliateId);
+            let affiliateLink = '';
+            try {
+                affiliateLink = await generateShopeeLinkFromApi(productDetails.product_url, affiliateId);
+            } catch {
+                // Fallback local sem IA
+                try {
+                    affiliateLink = shopeeAffiliateService.generateAffiliateLink(productDetails.product_url, affiliateId);
+                } catch {
+                    const url = new URL(productDetails.product_url);
+                    if (affiliateId) url.searchParams.set('af_id', affiliateId);
+                    affiliateLink = url.toString();
+                }
+            }
 
             // Use sendPhoto to send an image with a caption and button
             const payload = {
@@ -120,6 +156,31 @@ export const TelegramShopeePage: React.FC = () => {
                 }
             );
 
+            // Debitar créditos e registrar transação simples
+            try {
+                const rawUser = localStorage.getItem('aci_user');
+                if (rawUser) {
+                    const user = JSON.parse(rawUser);
+                    const debit = 0.03;
+                    user.credits = Math.max(0, (user.credits || 0) - debit);
+                    localStorage.setItem('aci_user', JSON.stringify(user));
+                    // Notificar app para atualizar status de crédito
+                    try {
+                      window.dispatchEvent(new Event('aci:user-updated'));
+                    } catch {}
+                    const txRaw = localStorage.getItem('aci_credit_transactions') || '[]';
+                    const tx = JSON.parse(txRaw);
+                    tx.unshift({
+                        id: Date.now().toString(),
+                        type: 'debit',
+                        amount: -debit,
+                        service: 'Envio de Produto Shopee para Telegram',
+                        at: new Date().toISOString(),
+                    });
+                    localStorage.setItem('aci_credit_transactions', JSON.stringify(tx));
+                }
+            } catch {}
+
         } catch (err) {
             console.error("Error sending Telegram message:", err);
             const errorMessage = err instanceof Error ? err.message : String(err);
@@ -136,6 +197,180 @@ export const TelegramShopeePage: React.FC = () => {
             setIsSending(false);
         }
     }, [botToken, chatId, affiliateId, offerMessage, productDetails]);
+
+    // Descobrir IDs dos chats via getUpdates e outras APIs
+    const handleDiscoverIds = async () => {
+        if (!botToken) {
+            setError('Informe o token do bot para descobrir IDs');
+            return;
+        }
+        setIsTesting(true);
+        setError(null);
+        setShowChatList(false);
+        setFoundChats([]);
+        
+        try {
+            console.log('🔍 Iniciando descoberta de IDs...');
+            
+            // 1. Primeiro, verificar se o bot é válido
+            const meResponse = await fetch(`https://api.telegram.org/bot${botToken}/getMe`);
+            const meData = await meResponse.json();
+            
+            if (!meData.ok) {
+                throw new Error('Token inválido: ' + (meData.description || 'Falha na validação'));
+            }
+            
+            console.log('✅ Bot válido:', meData.result.username);
+            
+            // 2. Tentar getUpdates para chats recentes
+            const updatesResponse = await fetch(`https://api.telegram.org/bot${botToken}/getUpdates?limit=100&timeout=10`);
+            const updatesData = await updatesResponse.json();
+            
+            if (!updatesData.ok) {
+                console.log('⚠️ getUpdates falhou:', updatesData.description);
+            } else {
+                console.log('📡 Updates recebidos:', updatesData.result?.length || 0);
+            }
+            
+            // 3. Buscar grupos e canais onde o bot é membro
+            const chatsMap = new Map<string, any>();
+            
+            // Processar updates se disponíveis
+            if (updatesData.ok && updatesData.result) {
+                updatesData.result.forEach((update: any) => {
+                    const chat = update.message?.chat || update.channel_post?.chat || update.edited_message?.chat;
+                    if (chat) {
+                        const chatInfo = {
+                            id: chat.id,
+                            title: chat.title || chat.first_name || chat.username || 'Chat',
+                            type: chat.type || 'unknown',
+                            username: chat.username,
+                            source: 'getUpdates'
+                        };
+                        chatsMap.set(String(chat.id), chatInfo);
+                    }
+                });
+            }
+            
+            // 4. Tentar buscar informações específicas de grupos/canais conhecidos
+            const knownChatIds = [
+                // IDs que você mencionou anteriormente
+                '-1002795748070', // shopee/imports
+                '-4921615549',    // Automações Comerciais Integradas!
+                '-1001834086191', // ACI
+                '-1002663998616', // fco
+                '-5667792894'     // outro grupo
+            ];
+            
+            console.log('🔍 Verificando chats conhecidos...');
+            
+            for (const chatId of knownChatIds) {
+                try {
+                    const chatResponse = await fetch(`https://api.telegram.org/bot${botToken}/getChat`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ chat_id: chatId })
+                    });
+                    
+                    const chatData = await chatResponse.json();
+                    
+                    if (chatData.ok) {
+                        const chat = chatData.result;
+                        const memberResponse = await fetch(`https://api.telegram.org/bot${botToken}/getChatMember`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ chat_id: chatId, user_id: meData.result.id })
+                        });
+                        
+                        const memberData = await memberResponse.json();
+                        const status = memberData.ok ? memberData.result.status : 'unknown';
+                        
+                        const chatInfo = {
+                            id: chat.id,
+                            title: chat.title || chat.username || 'Chat',
+                            type: chat.type || 'unknown',
+                            username: chat.username,
+                            status: status,
+                            source: 'known_chat'
+                        };
+                        
+                        chatsMap.set(String(chat.id), chatInfo);
+                        console.log('✅ Chat verificado:', chatInfo.title, 'Status:', status);
+                    }
+                } catch (error) {
+                    console.log('❌ Erro ao verificar chat', chatId, ':', error);
+                }
+            }
+            
+            // 5. Converter para lista e ordenar
+            const list = Array.from(chatsMap.values()).sort((a, b) => {
+                // Priorizar chats onde o bot tem status conhecido
+                if (a.status && !b.status) return -1;
+                if (!a.status && b.status) return 1;
+                // Depois por tipo (canal > supergrupo > grupo)
+                const typeOrder = { 'channel': 3, 'supergroup': 2, 'group': 1, 'private': 0 };
+                return (typeOrder[b.type as keyof typeof typeOrder] || 0) - (typeOrder[a.type as keyof typeof typeOrder] || 0);
+            });
+            
+            setFoundChats(list);
+            setShowChatList(true);
+            
+            if (list.length === 0) {
+                setError('Nenhum chat encontrado. Verifique se o bot foi adicionado aos grupos/canais.');
+            } else {
+                console.log('🎉 Chats encontrados:', list.length);
+                setError(null);
+            }
+            
+        } catch (e: any) {
+            console.error('❌ Erro na descoberta:', e);
+            let errorMsg = 'Erro ao buscar IDs: ' + (e?.message || 'Falha desconhecida');
+            
+            if (e?.message?.includes('Unauthorized')) {
+                errorMsg = 'Token inválido. Copie novamente do @BotFather';
+            } else if (e?.message?.includes('Too Many Requests')) {
+                errorMsg = 'Muitas requisições. Aguarde um momento e tente novamente.';
+            }
+            
+            setError(errorMsg);
+        } finally {
+            setIsTesting(false);
+        }
+    };
+
+    // Testar conexão de chat
+    const handleTestConnection = async () => {
+        if (!botToken || !chatId) {
+            setError('Informe token e ID do chat para testar conexão');
+            return;
+        }
+        setIsTesting(true);
+        setError(null);
+        try {
+            const me = await fetch(`https://api.telegram.org/bot${botToken}/getMe`).then(r => r.json());
+            if (!me.ok) throw new Error('Token inválido: ' + me.description);
+            const chatResp = await fetch(`https://api.telegram.org/bot${botToken}/getChat`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: chatId })
+            }).then(r => r.json());
+            if (!chatResp.ok) throw new Error(chatResp.description || 'chat not found');
+            const memberResp = await fetch(`https://api.telegram.org/bot${botToken}/getChatMember`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: chatId, user_id: me.result.id })
+            }).then(r => r.json());
+            if (!memberResp.ok) {
+                alert('Conectado, mas não foi possível verificar permissões.');
+            } else {
+                alert(`✅ Conectado: status ${memberResp.result.status}`);
+            }
+        } catch (e: any) {
+            let msg = e?.message || 'Falha desconhecida';
+            if (/Unauthorized/i.test(msg)) msg = 'Token inválido. Copie novamente do @BotFather';
+            if (/chat not found/i.test(msg)) msg = 'Chat não encontrado. Adicione o bot ao grupo/canal e use ID com prefixo -100 para canais';
+            if (/Forbidden/i.test(msg)) msg = 'Bot sem permissão. Torne-o administrador (canais) ou permita enviar mensagens (grupos)';
+            setError(msg);
+        } finally {
+            setIsTesting(false);
+        }
+    };
 
     const renderProductDetails = () => (
         productDetails && (
@@ -194,6 +429,55 @@ export const TelegramShopeePage: React.FC = () => {
                         <div>
                             <label htmlFor="chatId" className="block text-sm font-medium text-dark-text-secondary mb-2">ID do Chat/Canal</label>
                             <input type="text" id="chatId" value={chatId} onChange={e => setChatId(e.target.value)} className="w-full bg-slate-800 border border-dark-border rounded-lg p-3 text-dark-text-primary placeholder-gray-500 focus:ring-2 focus:ring-brand-primary" placeholder="@seu_canal ou -100123456789" />
+                            <div className="mt-3 flex gap-2">
+                                <button onClick={handleDiscoverIds} disabled={!botToken || isTesting} className="bg-purple-600 hover:bg-purple-700 px-3 py-2 rounded disabled:opacity-50 text-sm">📋 Descobrir IDs</button>
+                                <button onClick={handleTestConnection} disabled={!botToken || !chatId || isTesting} className="bg-blue-600 hover:bg-blue-700 px-3 py-2 rounded disabled:opacity-50 text-sm">🔍 Testar Conexão</button>
+                            </div>
+                            {showChatList && foundChats.length > 0 && (
+                                <div className="mt-3 bg-slate-800/60 border border-dark-border rounded p-3 max-h-48 overflow-y-auto text-sm">
+                                    <div className="mb-2 text-dark-text-secondary">IDs encontrados (clique para copiar e preencher):</div>
+                                    {foundChats.map((c) => (
+                                        <button key={c.id} onClick={() => { navigator.clipboard.writeText(String(c.id)); setChatId(String(c.id)); }} className="w-full text-left p-2 rounded hover:bg-slate-700 mb-2 border border-slate-600">
+                                            <div className="flex items-center justify-between mb-1">
+                                                <span className="text-dark-text-primary font-medium">{c.title}</span>
+                                                <div className="flex items-center gap-2">
+                                                    <span className={`px-2 py-1 rounded text-xs ${
+                                                        c.type === 'channel' ? 'bg-red-600' :
+                                                        c.type === 'supergroup' ? 'bg-blue-600' :
+                                                        c.type === 'group' ? 'bg-green-600' :
+                                                        'bg-gray-600'
+                                                    }`}>
+                                                        {c.type === 'channel' ? '📢 Canal' :
+                                                         c.type === 'supergroup' ? '👥 Supergrupo' :
+                                                         c.type === 'group' ? '👥 Grupo' :
+                                                         c.type}
+                                                    </span>
+                                                    {c.status && (
+                                                        <span className={`px-2 py-1 rounded text-xs ${
+                                                            c.status === 'administrator' ? 'bg-purple-600' :
+                                                            c.status === 'member' ? 'bg-blue-600' :
+                                                            c.status === 'left' ? 'bg-gray-600' :
+                                                            'bg-yellow-600'
+                                                        }`}>
+                                                            {c.status === 'administrator' ? '👑 Admin' :
+                                                             c.status === 'member' ? '✅ Membro' :
+                                                             c.status === 'left' ? '❌ Saiu' :
+                                                             c.status}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <div className="text-xs text-purple-300 break-all mb-1">{c.id}</div>
+                                            {c.username && (
+                                                <div className="text-xs text-blue-400">@{c.username}</div>
+                                            )}
+                                            <div className="text-xs text-gray-400 mt-1">
+                                                Fonte: {c.source === 'getUpdates' ? '📡 Updates recentes' : '🔍 Chat conhecido'}
+                                            </div>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                         <div>
                             <label htmlFor="affiliateId" className="block text-sm font-medium text-dark-text-secondary mb-2">ID de Afiliado Shopee <span className="text-xs">(Opcional)</span></label>
@@ -217,9 +501,6 @@ export const TelegramShopeePage: React.FC = () => {
 
                     {renderProductDetails()}
                     {renderMessageComposer()}
-
-                    <hr className="border-dark-border" />
-                    <ShopeeLinkShortener />
                 </div>
 
                 {/* Preview Column */}
@@ -251,6 +532,18 @@ export const TelegramShopeePage: React.FC = () => {
                             >
                                 {isSending ? <SpinnerIcon /> : <TelegramIcon className="h-5 w-5" />}
                                 <span>{isSending ? 'Enviando...' : 'Enviar Oferta'}</span>
+                            </button>
+                        </div>
+                        <div className="mt-4">
+                            <button
+                              onClick={() => {
+                                // Navegação simples: salvar intenção e deixar App ler
+                                try { localStorage.setItem('aci:navigate', 'generate-link'); } catch {}
+                                window.dispatchEvent(new Event('aci:navigate'));
+                              }}
+                              className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-4 rounded-lg"
+                            >
+                              Gerar Links
                             </button>
                         </div>
                     </div>

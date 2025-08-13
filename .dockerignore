@@ -88,6 +88,22 @@ scripts/git-*.bat
 *-complete.tsx
 *-final.tsx
 *-integrated.tsx
+*-backup-*.tsx
+*-STABLE-*.tsx
 
-# Metadata
+# Arquivos de backup e logs
+BACKUP-LOG-*.md
+*.backup
+*.bak
+
+# Metadata e configurações de desenvolvimento
 metadata.json
+.prettierrc
+eslint.config.js
+
+# Arquivos de documentação e planejamento
+plan/
+SETUP_GIT.md
+RESUMO_DOCKER.md
+INSTRUCOES_DOCKER.md
+COMANDOS_DOCKER.md

@@ -1,7 +1,0 @@
-// Após criar o repositório no GitHub, execute estes comandos:
-
-git remote add origin https://github.com/SEU_USUARIO/api-mercado-livre-tokens.git
-git push -u origin main
-
-// Substitua SEU_USUARIO pelo seu username do GitHub
-// Exemplo: git remote add origin https://github.com/joaosilva/api-mercado-livre-tokens.git

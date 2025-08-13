@@ -31,26 +31,22 @@ export const useAuth = (): AuthState & AuthActions => {
   useEffect(() => {
     const initAuth = async () => {
       try {
-        if (authService.isAuthenticated()) {
-          const user = authService.getCurrentUser();
-          setState(prev => ({
-            ...prev,
-            user,
-            isAuthenticated: !!user,
-            isLoading: false,
-          }));
-        } else {
-          setState(prev => ({
-            ...prev,
-            isLoading: false,
-          }));
-        }
-      } catch (error) {
-        setState(prev => ({
-          ...prev,
-          error: 'Erro ao verificar autenticação',
+        const isAuth = authService.isAuthenticated();
+        const user = isAuth ? authService.getCurrentUser() : null;
+        
+        setState({
+          user,
+          isAuthenticated: !!user,
           isLoading: false,
-        }));
+          error: null,
+        });
+      } catch (error) {
+        setState({
+          user: null,
+          isAuthenticated: false,
+          isLoading: false,
+          error: 'Erro ao verificar autenticação',
+        });
       }
     };
 

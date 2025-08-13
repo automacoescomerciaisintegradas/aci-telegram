@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { Button } from './FormComponents'; // Assumindo que você tem um componente Button
-import { Input } from './FormComponents'; // Assumindo que você tem um componente Input
+import { Button, InputField as Input } from './FormComponents';
 import { shopeeAffiliateService } from '../services/shopeeAffiliateService'; // Importar o serviço
 
 const ShopeeLinkShortener: React.FC = () => {

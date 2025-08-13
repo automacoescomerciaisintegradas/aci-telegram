@@ -1,4 +1,4 @@
-import { Notification } from '../components/NotificationCenter';
+import type { Notification } from '@/types/notification.ts';
 
 export interface NotificationPreferences {
   email: boolean;

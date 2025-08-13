@@ -1,174 +1,331 @@
-import React, { useState, useCallback, FormEvent, useEffect } from 'react';
-import { shopeeAffiliateService } from '../services/shopeeAffiliateService';
-import { configService } from '../services/configService';
-import { LinkIcon, SpinnerIcon, AlertTriangleIcon, CopyIcon, CheckIcon } from './Icons';
+                              import React, { useState } from 'react';
 
-export const LinkGenerator: React.FC = () => {
-  const [productUrl, setProductUrl] = useState('');
-  const [affiliateId, setAffiliateId] = useState('');
-  const [generatedLink, setGeneratedLink] = useState<string>('');
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-  const [isCopied, setIsCopied] = useState(false);
+interface LinkGeneratorProps {
+  onBack?: () => void;
+}
 
-  // Carregar ID de afiliado das configurações
-  useEffect(() => {
+interface GeneratedLink {
+  originalUrl: string;
+  affiliateUrl: string;
+  subIds: string[];
+  timestamp: Date;
+}
+
+const LinkGenerator: React.FC<LinkGeneratorProps> = ({ onBack }) => {
+  const [shopeeUrl, setShopeeUrl] = useState('');
+  const [subIds, setSubIds] = useState(['', '', '', '', '']);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedLinks, setGeneratedLinks] = useState<GeneratedLink[]>([]);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  // Carregar links gerados do localStorage
+  React.useEffect(() => {
     try {
-      const config = configService.get('shopee');
-      if (config.affiliateId) {
-        setAffiliateId(config.affiliateId);
+      const saved = localStorage.getItem('aci_generated_links');
+      if (saved) {
+        setGeneratedLinks(JSON.parse(saved));
       }
-    } catch {
-      console.log('Configurações do Shopee não encontradas, usando valores padrão');
+    } catch (error) {
+      console.error('Erro ao carregar links:', error);
     }
   }, []);
 
-  const handleSubmit = useCallback(async (e: FormEvent) => {
-    e.preventDefault();
-    if (!productUrl.trim()) {
-      setError('Por favor, insira o link do produto Shopee.');
+  // Salvar links no localStorage
+  const saveLinks = (links: GeneratedLink[]) => {
+    try {
+      localStorage.setItem('aci_generated_links', JSON.stringify(links));
+    } catch (error) {
+      console.error('Erro ao salvar links:', error);
+    }
+  };
+
+  const validateShopeeUrl = (url: string): boolean => {
+    if (!url) return false;
+    
+    // Verificar se é uma URL válida da Shopee Brasil
+    const shopeePattern = /^https?:\/\/(www\.)?shopee\.com\.br\/.*/;
+    return shopeePattern.test(url);
+  };
+
+  const validateSubId = (subId: string): boolean => {
+    if (!subId) return true; // Sub_IDs vazios são permitidos
+    // Apenas alfanumérico (a-z, A-Z, 0-9)
+    const subIdPattern = /^[a-zA-Z0-9]+$/;
+    return subIdPattern.test(subId);
+  };
+
+  const generateAffiliateLink = async () => {
+    setError('');
+    setSuccess('');
+
+    // Validações
+    if (!validateShopeeUrl(shopeeUrl)) {
+      setError('Por favor, insira uma URL válida da Shopee Brasil.');
       return;
     }
 
-    setIsLoading(true);
-    setError(null);
-    setGeneratedLink('');
-    setIsCopied(false);
+    // Validar Sub_IDs
+    const invalidSubIds = subIds.filter(subId => !validateSubId(subId));
+    if (invalidSubIds.length > 0) {
+      setError('Sub_IDs devem conter apenas letras e números (a-z, A-Z, 0-9).');
+      return;
+    }
+
+    setIsGenerating(true);
 
     try {
-      const result = shopeeAffiliateService.generateAffiliateLink(productUrl, affiliateId);
-      setGeneratedLink(result);
-    } catch (err) {
-      console.error(err);
-      const errorMessage = err instanceof Error ? err.message : 'Ocorreu um erro ao gerar o link. Por favor, verifique os dados e tente novamente.';
-      setError(errorMessage);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [productUrl, affiliateId]);
+      // Simular geração de link (em produção, isso seria uma chamada para a API da Shopee)
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
-  const handleCopy = () => {
-    if (!generatedLink) return;
-    navigator.clipboard.writeText(generatedLink);
-    setIsCopied(true);
-    setTimeout(() => setIsCopied(false), 2000);
+      // Gerar link de afiliado (exemplo - em produção seria a API real)
+      const affiliateId = '18372150411'; // Seu ID de afiliado
+      const baseUrl = new URL(shopeeUrl);
+      
+      // Adicionar parâmetros de afiliado
+      baseUrl.searchParams.set('affiliate_id', affiliateId);
+      
+      // Adicionar Sub_IDs preenchidos
+      subIds.forEach((subId, index) => {
+        if (subId.trim()) {
+          baseUrl.searchParams.set(`sub_id${index + 1}`, subId.trim());
+        }
+      });
+
+      const newLink: GeneratedLink = {
+        originalUrl: shopeeUrl,
+        affiliateUrl: baseUrl.toString(),
+        subIds: subIds.filter(subId => subId.trim()),
+        timestamp: new Date()
+      };
+
+      const updatedLinks = [newLink, ...generatedLinks];
+      setGeneratedLinks(updatedLinks);
+      saveLinks(updatedLinks);
+
+      setSuccess('Link de afiliado gerado com sucesso!');
+      
+      // Limpar formulário
+      setShopeeUrl('');
+      setSubIds(['', '', '', '', '']);
+
+    } catch (error) {
+      setError('Erro ao gerar link. Tente novamente.');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setSuccess('Link copiado para a área de transferência!');
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (error) {
+      setError('Erro ao copiar link.');
+    }
+  };
+
+  const removeLink = (index: number) => {
+    const updatedLinks = generatedLinks.filter((_, i) => i !== index);
+    setGeneratedLinks(updatedLinks);
+    saveLinks(updatedLinks);
   };
 
   return (
-    <>
-      <div className="mb-10">
-        <h1 className="text-3xl font-bold text-dark-text-primary mb-2">
-          Gerador de Link de Afiliado - Shopee
-        </h1>
-        <p className="text-md text-dark-text-secondary">
-          Cole o link do produto e seu ID de afiliado para criar um link rastreável.
-        </p>
-      </div>
-
-      <div className="bg-dark-card rounded-xl shadow-2xl shadow-black/20 border border-dark-border p-6 md:p-8">
-        <form onSubmit={handleSubmit}>
-          <div className="space-y-6">
+    <div className="min-h-screen bg-gray-900 text-white p-6">
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-6">
             <div>
-              <label htmlFor="productUrl" className="block text-sm font-medium text-dark-text-secondary mb-2">
-                Cole aqui o link do produto
-              </label>
-              <textarea
-                id="productUrl"
-                name="productUrl"
-                rows={3}
-                value={productUrl}
-                onChange={(e) => setProductUrl(e.target.value)}
-                className="w-full bg-slate-800 border border-dark-border rounded-lg p-3 text-dark-text-primary placeholder-gray-500 focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition duration-200"
-                placeholder="https://shopee.com.br/..."
-                disabled={isLoading}
-              />
-            </div>
-
-            <div>
-              <label htmlFor="affiliateId" className="block text-sm font-medium text-dark-text-secondary mb-2">
-                Seu ID de Afiliado <span className="text-xs">(Opcional)</span>
-              </label>
-              <input
-                type="text"
-                id="affiliateId"
-                name="affiliateId"
-                value={affiliateId}
-                onChange={(e) => setAffiliateId(e.target.value)}
-                className="w-full bg-slate-800 border border-dark-border rounded-lg p-3 text-dark-text-primary placeholder-gray-500 focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition duration-200"
-                placeholder="Ex: 123456789"
-                disabled={isLoading}
-              />
-              <p className="text-xs text-dark-text-secondary mt-2">
-                Se não informado, será usado o ID configurado no Painel Administrativo
+              <h1 className="text-3xl font-bold text-blue-400 mb-2">
+                Gerador de Links de Afiliado
+              </h1>
+              <p className="text-gray-300 text-lg">
+                Crie links de afiliado personalizados para a Shopee Brasil e rastreie seu desempenho
               </p>
             </div>
-          </div>
-
-          <div className="mt-8">
-            <button
-              type="submit"
-              disabled={isLoading || !productUrl}
-              className="w-full flex items-center justify-center gap-2 bg-brand-primary text-white font-bold py-3 px-4 rounded-lg hover:bg-brand-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity duration-300 shadow-lg shadow-indigo-500/30"
-            >
-              {isLoading ? (
-                <>
-                  <SpinnerIcon />
-                  Gerando...
-                </>
-              ) : (
-                <>
-                  <LinkIcon className="h-5 w-5" />
-                  Gerar Link
-                </>
-              )}
-            </button>
-          </div>
-        </form>
-      </div>
-
-      {error && (
-        <div className="mt-8 bg-red-900/50 border border-red-700 text-red-300 p-4 rounded-lg flex items-center gap-3">
-          <AlertTriangleIcon />
-          <p>{error}</p>
-        </div>
-      )}
-      
-      {isLoading && (
-          <div className="mt-8 bg-dark-card border border-dark-border rounded-xl p-6">
-             <div className="space-y-4 animate-pulse-fast">
-                <div className="h-4 bg-slate-700 rounded w-1/3"></div>
-                <div className="h-10 bg-slate-800 rounded w-full"></div>
-            </div>
-          </div>
-      )}
-
-      {!isLoading && generatedLink && (
-        <div className="mt-8 bg-dark-card border border-dark-border rounded-xl p-6">
-          <h2 className="text-lg font-semibold text-dark-text-primary mb-3">
-            ✅ Seu link de afiliado está pronto:
-          </h2>
-          <div className="bg-slate-800 p-4 rounded-lg border border-dark-border">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-sm text-dark-text-secondary">Link gerado:</span>
+            {onBack && (
               <button
-                onClick={handleCopy}
-                className="flex items-center gap-2 text-sm bg-green-600 hover:bg-green-500 text-white font-medium py-1 px-3 rounded-md transition-colors"
+                onClick={onBack}
+                className="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg transition-colors"
               >
-                {isCopied ? <CheckIcon className="h-4 w-4" /> : <CopyIcon className="h-4 w-4" />}
-                {isCopied ? 'Copiado!' : 'Copiar Link'}
+                Voltar
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Formulário */}
+          <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
+            <h2 className="text-xl font-semibold mb-4 text-blue-400">
+              Criar Link Personalizado
+            </h2>
+            
+            <div className="space-y-4">
+              {/* URL da Shopee */}
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  URL da Página da Shopee *
+                </label>
+                <input
+                  type="url"
+                  value={shopeeUrl}
+                  onChange={(e) => setShopeeUrl(e.target.value)}
+                  placeholder="https://shopee.com.br/produto/..."
+                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+                <p className="text-xs text-gray-400 mt-1">
+                  Cole a URL da página da Shopee que você deseja divulgar
+                </p>
+              </div>
+
+              {/* Sub_IDs */}
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Sub_IDs para Rastreamento (Opcional)
+                </label>
+                <p className="text-xs text-gray-400 mb-3">
+                  Adicione até 5 Sub_IDs para rastrear o desempenho dos seus links
+                </p>
+                
+                <div className="space-y-2">
+                  {subIds.map((subId, index) => (
+                    <div key={index} className="flex items-center space-x-2">
+                      <input
+                        type="text"
+                        value={subId}
+                        onChange={(e) => {
+                          const newSubIds = [...subIds];
+                          newSubIds[index] = e.target.value;
+                          setSubIds(newSubIds);
+                        }}
+                        placeholder={`Sub_id ${index + 1}`}
+                        className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                      {subId && (
+                        <span className="text-xs text-gray-400 w-16">
+                          {validateSubId(subId) ? '✅' : '❌'}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                
+                <p className="text-xs text-gray-400 mt-2">
+                  Sub_IDs devem conter apenas letras e números (a-z, A-Z, 0-9)
+                </p>
+              </div>
+
+              {/* Botão Gerar */}
+              <button
+                onClick={generateAffiliateLink}
+                disabled={isGenerating || !shopeeUrl}
+                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-lg transition-colors"
+              >
+                {isGenerating ? 'Gerando...' : 'Gerar Link de Afiliado'}
               </button>
             </div>
-            <p className="text-brand-primary break-all text-sm bg-slate-900 p-3 rounded border">
-              {generatedLink}
-            </p>
+
+            {/* Informações */}
+            <div className="mt-6 p-4 bg-gray-700 rounded-lg">
+              <h3 className="font-semibold mb-2 text-blue-400">Páginas Suportadas:</h3>
+              <ul className="text-sm text-gray-300 space-y-1">
+                <li>• Página inicial da Shopee</li>
+                <li>• Páginas de detalhes de produtos</li>
+                <li>• Páginas de campanhas promocionais</li>
+                <li>• Páginas de lojas de vendedores</li>
+                <li>• Páginas de categorias de produtos</li>
+              </ul>
+            </div>
           </div>
-          <div className="mt-4 p-3 bg-blue-900/30 border border-blue-700 rounded-lg">
-            <p className="text-blue-300 text-sm">
-              💡 <strong>Dica:</strong> Agora você pode compartilhar este link e receber comissões pelas vendas realizadas através dele!
-            </p>
+
+          {/* Links Gerados */}
+          <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
+            <h2 className="text-xl font-semibold mb-4 text-green-400">
+              Links Gerados ({generatedLinks.length})
+            </h2>
+            
+            {generatedLinks.length === 0 ? (
+              <div className="text-center py-8 text-gray-400">
+                <p>Nenhum link gerado ainda.</p>
+                <p className="text-sm">Use o formulário ao lado para criar seu primeiro link.</p>
+              </div>
+            ) : (
+              <div className="space-y-4 max-h-96 overflow-y-auto">
+                {generatedLinks.map((link, index) => (
+                  <div key={index} className="bg-gray-700 rounded-lg p-4">
+                    <div className="flex justify-between items-start mb-2">
+                      <span className="text-xs text-gray-400">
+                        {link.timestamp.toLocaleString('pt-BR')}
+                      </span>
+                      <button
+                        onClick={() => removeLink(index)}
+                        className="text-red-400 hover:text-red-300 text-sm"
+                      >
+                        Remover
+                      </button>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <div>
+                        <p className="text-xs text-gray-400">URL Original:</p>
+                        <p className="text-sm text-gray-300 break-all">{link.originalUrl}</p>
+                      </div>
+                      
+                      <div>
+                        <p className="text-xs text-gray-400">Link de Afiliado:</p>
+                        <div className="flex items-center space-x-2">
+                          <p className="text-sm text-blue-400 break-all flex-1">{link.affiliateUrl}</p>
+                          <button
+                            onClick={() => copyToClipboard(link.affiliateUrl)}
+                            className="bg-blue-600 hover:bg-blue-700 px-2 py-1 rounded text-xs"
+                          >
+                            Copiar
+                          </button>
+                        </div>
+                      </div>
+                      
+                      {link.subIds.length > 0 && (
+                        <div>
+                          <p className="text-xs text-gray-400">Sub_IDs:</p>
+                          <div className="flex flex-wrap gap-1">
+                            {link.subIds.map((subId, subIndex) => (
+                              <span
+                                key={subIndex}
+                                className="bg-gray-600 px-2 py-1 rounded text-xs"
+                              >
+                                {subId}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
-      )}
-    </>
+
+        {/* Mensagens de Feedback */}
+        {error && (
+          <div className="fixed bottom-4 right-4 bg-red-600 text-white px-6 py-3 rounded-lg shadow-lg">
+            {error}
+          </div>
+        )}
+        
+        {success && (
+          <div className="fixed bottom-4 right-4 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg">
+            {success}
+          </div>
+        )}
+      </div>
+    </div>
   );
 };
+
+export default LinkGenerator;

@@ -110,8 +110,21 @@ aci-automacoes/
 │   ├── git-setup.ps1   # Configuração Git
 │   └── git-commit.ps1  # Commit automático
 ├── docs/               # Documentação
+│   ├── rfcs/           # RFCs (Request For Comments)
+│   ├── adrs/           # ADRs (Architecture Decision Records)
+│   └── ...
 └── ...
 ```
+
+## 📝 Documentação Técnica
+
+O projeto utiliza dois tipos principais de documentação técnica:
+
+### RFCs (Request For Comments)
+Propostas de mudanças técnicas ou funcionais para discussão da equipe, antes da implementação.
+
+### ADRs (Architecture Decision Records)
+Registros das decisões arquiteturais tomadas no projeto, após aprovação e implementação.
 
 ## 🐳 Docker
 

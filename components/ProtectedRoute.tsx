@@ -1,65 +1,49 @@
 import React from 'react';
-import { useAuth } from '../hooks/useAuth';
+import { User } from '../services/authService';
 
 interface ProtectedRouteProps {
+  user: User;
+  allowedRoles: ('admin' | 'user')[];
   children: React.ReactNode;
-  requiredRole?: 'admin' | 'user';
   fallback?: React.ReactNode;
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
+  user,
+  allowedRoles,
   children,
-  requiredRole,
-  fallback,
+  fallback
 }) => {
-  const { isAuthenticated, user, isLoading } = useAuth();
+  const hasPermission = allowedRoles.includes(user.role);
 
-  // Mostra loading enquanto verifica autenticação
-  if (isLoading) {
+  if (!hasPermission) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-dark-900">
-        <div className="text-center">
-          <div className="loading-spinner w-8 h-8 mx-auto mb-4"></div>
-          <p className="text-gray-400">Verificando autenticação...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Se não está autenticado, mostra fallback ou nada
-  if (!isAuthenticated) {
-    return fallback ? <>{fallback}</> : null;
-  }
-
-  // Verifica role se especificada
-  if (requiredRole && user?.role !== requiredRole) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-dark-900">
-        <div className="text-center">
-          <div className="text-red-500 text-6xl mb-4">🚫</div>
-          <h2 className="text-2xl font-bold text-white mb-2">Acesso Negado</h2>
-          <p className="text-gray-400">
-            Você não tem permissão para acessar esta página.
-          </p>
-          <p className="text-sm text-gray-500 mt-2">
-            Role necessária: {requiredRole} | Sua role: {user?.role}
-          </p>
+      <div className="flex-1 p-8">
+        <div className="max-w-4xl mx-auto text-center">
+          <div className="bg-red-900/20 border border-red-700 rounded-lg p-8">
+            <div className="text-red-400 text-6xl mb-4">🚫</div>
+            <h2 className="text-2xl font-bold text-red-400 mb-4">Acesso Negado</h2>
+            <p className="text-red-300 mb-6">
+              Você não tem permissão para acessar esta funcionalidade.
+            </p>
+            <div className="bg-red-800/30 rounded-lg p-4 mb-6">
+              <p className="text-sm text-red-200">
+                <strong>Seu nível:</strong> {user.role === 'user' ? 'Usuário' : 'Administrador'}
+              </p>
+              <p className="text-sm text-red-200">
+                <strong>Necessário:</strong> {allowedRoles.map(role =>
+                  role === 'admin' ? 'Administrador' : 'Usuário'
+                ).join(' ou ')}
+              </p>
+            </div>
+            <p className="text-sm text-gray-400">
+              Entre em contato com o administrador do sistema se você acredita que deveria ter acesso a esta área.
+            </p>
+          </div>
         </div>
       </div>
     );
   }
 
   return <>{children}</>;
-};
-
-// HOC para facilitar o uso
-export const withAuth = <P extends object>(
-  Component: React.ComponentType<P>,
-  requiredRole?: 'admin' | 'user'
-) => {
-  return (props: P) => (
-    <ProtectedRoute requiredRole={requiredRole}>
-      <Component {...props} />
-    </ProtectedRoute>
-  );
 };

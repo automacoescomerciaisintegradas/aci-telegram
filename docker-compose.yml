@@ -5,27 +5,45 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        - REACT_APP_SUPABASE_URL=${REACT_APP_SUPABASE_URL}
+        - REACT_APP_SUPABASE_ANON_KEY=${REACT_APP_SUPABASE_ANON_KEY}
+        - GEMINI_API_KEY=${GEMINI_API_KEY}
+        - API_KEY=${API_KEY}
     container_name: aci-automacoes
     ports:
       - "3000:80"
     environment:
+      - NODE_ENV=production
+      - REACT_APP_SUPABASE_URL=${REACT_APP_SUPABASE_URL}
+      - REACT_APP_SUPABASE_ANON_KEY=${REACT_APP_SUPABASE_ANON_KEY}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
-      - API_KEY=${GEMINI_API_KEY}
+      - API_KEY=${API_KEY}
+      - VITE_BITLY_ACCESS_TOKEN=${VITE_BITLY_ACCESS_TOKEN}
     env_file:
       - .env.local
     restart: unless-stopped
     networks:
       - aci-network
+    volumes:
+      - aci-logs:/var/log/nginx
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.aci.rule=Host(`localhost`)"
       - "traefik.http.services.aci.loadbalancer.server.port=80"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
 networks:
   aci-network:
     driver: bridge
+    name: aci-network
 
-# Volume para logs (opcional)
 volumes:
   aci-logs:
     driver: local
+    name: aci-logs

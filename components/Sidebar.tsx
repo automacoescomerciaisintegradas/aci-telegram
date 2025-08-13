@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { LinkIcon, ImageIcon, ChatIcon, LogoutIcon, CreditIcon, SearchIcon, TrendingUpIcon, TelegramIcon, ShoppingCartSendIcon, SettingsIcon, BellIcon } from './Icons';
-import { Page } from '../App';
+type Page = 'dashboard' | 'admin' | 'telegram-shopee' | 'telegram' | 'whatsapp' | 'topsales' | 'search' | 'generate' | 'image' | 'chat' | 'notifications' | 'notification-demo' | 'notification-analytics' | 'notification-templates' | 'users' | 'reports';
 import { useAuth } from '../hooks/useAuth';
 import { ThemeToggle } from './ThemeToggle';
 
@@ -110,6 +110,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ activePage, onNavigate, onLogo
   const creditPercentage = (credits.used / credits.total) * 100;
   const unreadNotifications = 3;
 
+  // Verifica se o usuário é admin
+  const isAdmin = user?.role === 'admin';
+
   return (
     <aside className={`
       ${isCollapsed ? 'w-16' : 'w-64'} 
@@ -143,8 +146,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ activePage, onNavigate, onLogo
 
       {/* Navigation */}
       <div className="flex-1 overflow-y-auto p-4 space-y-6">
-        {/* Principais */}
-        <NavSection title="Principal">
+        {/* Dashboard - Sempre visível */}
+        <NavSection title="Dashboard">
+          <NavLink 
+            icon={<span className="text-blue-400">🏠</span>} 
+            text="Início" 
+            active={activePage === 'dashboard'} 
+            onClick={() => onNavigate('dashboard')} 
+          />
+        </NavSection>
+
+        {/* Principais - Apenas para usuários autenticados */}
+        <NavSection title="Automações">
           <NavLink 
             icon={<ShoppingCartSendIcon />} 
             text="Telegram + Shopee" 
@@ -231,6 +244,30 @@ export const Sidebar: React.FC<SidebarProps> = ({ activePage, onNavigate, onLogo
             onClick={() => onNavigate('notification-templates')} 
           />
         </NavSection>
+
+        {/* Administração - Apenas para admins */}
+        {isAdmin && (
+          <NavSection title="Administração">
+            <NavLink 
+              icon={<SettingsIcon />} 
+              text="Configurações" 
+              active={activePage === 'admin'} 
+              onClick={() => onNavigate('admin')} 
+            />
+            <NavLink 
+              icon={<span className="text-orange-400">👥</span>} 
+              text="Usuários" 
+              active={activePage === 'users'} 
+              onClick={() => onNavigate('users')} 
+            />
+            <NavLink 
+              icon={<span className="text-red-400">📊</span>} 
+              text="Relatórios" 
+              active={activePage === 'reports'} 
+              onClick={() => onNavigate('reports')} 
+            />
+          </NavSection>
+        )}
       </div>
 
       {/* Footer */}
@@ -277,12 +314,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ activePage, onNavigate, onLogo
 
           <div className="flex items-center space-x-2">
             <ThemeToggle className="flex-1" />
-            <NavLink 
-              icon={<SettingsIcon />} 
-              text="Admin" 
-              active={activePage === 'admin'} 
-              onClick={() => onNavigate('admin')} 
-            />
             <button
               onClick={onLogout}
               className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-colors"

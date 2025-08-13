@@ -7,17 +7,28 @@ export interface GeminiConfig {
 
 export interface TelegramConfig {
   botToken: string;
-  webhookUrl?: string;
+  chatId: string;
+  isConfigured: boolean;
+}
+
+export interface ShopeeConfig {
+  affiliateId: string;
+  isConfigured: boolean;
 }
 
 export interface WhatsAppConfig {
   apiKey: string;
-  phoneNumber?: string;
+  instanceName: string;
+  apiUrl: string;
+  channelUrl: string;
+  isConfigured: boolean;
 }
 
-export interface ShopeeConfig {
-  affiliateId?: string;
-  apiKey?: string;
+export interface SystemConfig {
+  telegram: TelegramConfig;
+  shopee: ShopeeConfig;
+  whatsapp: WhatsAppConfig;
+  lastUpdated: string;
 }
 
 export interface BitlyConfig {
@@ -70,20 +81,23 @@ const DEFAULT_CONFIG: ApiConfig = {
   },
   telegram: {
     botToken: '',
-    webhookUrl: ''
+    chatId: '',
+    isConfigured: false
   },
   whatsapp: {
     apiKey: '',
-    phoneNumber: ''
+    instanceName: '',
+    apiUrl: '',
+    channelUrl: '',
+    isConfigured: false
   },
   shopee: {
     affiliateId: '',
-    apiKey: ''
+    isConfigured: false
   },
   bitly: {
     accessToken: ''
   }
-};
 };
 
 const CONFIG_KEY = 'aci_config';
@@ -91,6 +105,7 @@ const CONFIG_VERSION = '1.0';
 
 class ConfigService {
   private cache: ApiConfig | null = null;
+  private readonly STORAGE_KEY = 'aci_system_config';
 
   /**
    * Carrega as configurações do localStorage
@@ -118,15 +133,19 @@ class ConfigService {
         },
         telegram: {
           botToken: decryptKey(parsedConfig.apis.telegram.botToken),
-          webhookUrl: parsedConfig.apis.telegram.webhookUrl
+          chatId: parsedConfig.apis.telegram.chatId || '',
+          isConfigured: false
         },
         whatsapp: {
           apiKey: decryptKey(parsedConfig.apis.whatsapp.apiKey),
-          phoneNumber: parsedConfig.apis.whatsapp.phoneNumber
+          instanceName: parsedConfig.apis.whatsapp.instanceName || '',
+          apiUrl: parsedConfig.apis.whatsapp.apiUrl || '',
+          channelUrl: parsedConfig.apis.whatsapp.channelUrl || '',
+          isConfigured: false
         },
         shopee: {
           affiliateId: parsedConfig.apis.shopee.affiliateId,
-          apiKey: decryptKey(parsedConfig.apis.shopee.apiKey || '')
+          isConfigured: !!parsedConfig.apis.shopee.affiliateId
         },
         bitly: {
           accessToken: decryptKey(parsedConfig.apis.bitly?.accessToken || '')
@@ -163,18 +182,22 @@ class ConfigService {
           },
           telegram: {
             botToken: encryptKey(config.telegram.botToken),
-            webhookUrl: config.telegram.webhookUrl,
+            chatId: config.telegram.chatId,
+            isConfigured: config.telegram.isConfigured,
             status: config.telegram.botToken ? 'active' : 'inactive'
           },
           whatsapp: {
             apiKey: encryptKey(config.whatsapp.apiKey),
-            phoneNumber: config.whatsapp.phoneNumber,
+            instanceName: config.whatsapp.instanceName,
+            apiUrl: config.whatsapp.apiUrl,
+            channelUrl: config.whatsapp.channelUrl,
+            isConfigured: config.whatsapp.isConfigured,
             status: config.whatsapp.apiKey ? 'active' : 'inactive'
           },
           shopee: {
             affiliateId: config.shopee.affiliateId,
-            apiKey: encryptKey(config.shopee.apiKey || ''),
-            status: config.shopee.affiliateId || config.shopee.apiKey ? 'active' : 'inactive'
+            isConfigured: config.shopee.isConfigured,
+            status: config.shopee.affiliateId ? 'active' : 'inactive'
           },
           bitly: {
             accessToken: encryptKey(config.bitly?.accessToken || ''),
@@ -213,7 +236,7 @@ class ConfigService {
       case 'whatsapp':
         return !!config.whatsapp.apiKey;
       case 'shopee':
-        return !!(config.shopee.affiliateId || config.shopee.apiKey);
+        return !!config.shopee.affiliateId;
       case 'bitly':
         return !!config.bitly.accessToken;
       default:
@@ -252,11 +275,11 @@ class ConfigService {
       }
     }
 
-    // Validar números de telefone do WhatsApp
-    if (config.whatsapp?.phoneNumber && 
-        config.whatsapp.phoneNumber && 
-        !/^\+\d{10,15}$/.test(config.whatsapp.phoneNumber)) {
-      throw new Error('Número de telefone do WhatsApp deve estar no formato internacional (+5511999999999)');
+    // Validar URL da API do WhatsApp
+    if (config.whatsapp?.apiUrl && 
+        config.whatsapp.apiUrl && 
+        !/^https?:\/\/.+/.test(config.whatsapp.apiUrl)) {
+      throw new Error('URL da API do WhatsApp deve ser uma URL válida');
     }
   }
 
@@ -273,24 +296,189 @@ class ConfigService {
       },
       telegram: {
         botToken: config.telegram.botToken ? '***configurado***' : '',
-        webhookUrl: config.telegram.webhookUrl
+        chatId: config.telegram.chatId || '',
+        isConfigured: config.telegram.isConfigured
       },
       whatsapp: {
         apiKey: config.whatsapp.apiKey ? '***configurado***' : '',
-        phoneNumber: config.whatsapp.phoneNumber
+        instanceName: config.whatsapp.instanceName || '',
+        apiUrl: config.whatsapp.apiUrl || '',
+        channelUrl: config.whatsapp.channelUrl || '',
+        isConfigured: config.whatsapp.isConfigured
       },
       shopee: {
         affiliateId: config.shopee.affiliateId,
-        apiKey: config.shopee.apiKey ? '***configurado***' : ''
+        isConfigured: config.shopee.isConfigured
       },
       bitly: {
         accessToken: config.bitly.accessToken ? '***configurado***' : ''
       }
     };
   }
+
+  // Obter configurações do sistema
+  getSystemConfig(): SystemConfig {
+    try {
+      const saved = localStorage.getItem(this.STORAGE_KEY);
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar configurações:', error);
+    }
+
+    // Configuração padrão
+    return {
+      telegram: { botToken: '', chatId: '', isConfigured: false },
+      shopee: { affiliateId: '', isConfigured: false },
+      whatsapp: { apiKey: '', instanceName: '', apiUrl: '', channelUrl: '', isConfigured: false },
+      lastUpdated: new Date().toISOString()
     };
+  }
+
+  // Salvar configurações do sistema
+  saveSystemConfig(config: Partial<SystemConfig>): void {
+    try {
+      const current = this.getSystemConfig();
+      const updated = { ...current, ...config, lastUpdated: new Date().toISOString() };
+      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(updated));
+    } catch (error) {
+      console.error('Erro ao salvar configurações:', error);
+    }
+  }
+
+  // Configurar Telegram
+  setTelegramConfig(botToken: string, chatId: string): void {
+    const config = this.getSystemConfig();
+    config.telegram = {
+      botToken,
+      chatId,
+      isConfigured: !!(botToken && chatId)
+    };
+    this.saveSystemConfig(config);
+  }
+
+  // Configurar Shopee
+  setShopeeConfig(affiliateId: string): void {
+    const config = this.getSystemConfig();
+    config.shopee = {
+      affiliateId,
+      isConfigured: !!affiliateId
+    };
+    this.saveSystemConfig(config);
+  }
+
+  // Configurar WhatsApp
+  setWhatsAppConfig(apiKey: string, instanceName: string, apiUrl: string, channelUrl: string): void {
+    const config = this.getSystemConfig();
+    config.whatsapp = {
+      apiKey,
+      instanceName,
+      apiUrl,
+      channelUrl,
+      isConfigured: !!(apiKey && instanceName && apiUrl && channelUrl)
+    };
+    this.saveSystemConfig(config);
+  }
+
+  // Obter configuração específica
+  getTelegramConfig(): TelegramConfig {
+    return this.getSystemConfig().telegram;
+  }
+
+  getShopeeConfig(): ShopeeConfig {
+    return this.getSystemConfig().shopee;
+  }
+
+  getWhatsAppConfig(): WhatsAppConfig {
+    return this.getSystemConfig().whatsapp;
+  }
+
+  // Verificar se todas as configurações necessárias estão prontas
+  isFullyConfigured(): boolean {
+    const config = this.getSystemConfig();
+    return config.telegram.isConfigured && config.shopee.isConfigured && config.whatsapp.isConfigured;
+  }
+
+  // Limpar todas as configurações
+  clearAllConfigs(): void {
+    try {
+      localStorage.removeItem(this.STORAGE_KEY);
+    } catch (error) {
+      console.error('Erro ao limpar configurações:', error);
+    }
+  }
+
+  // Migrar configurações antigas (se existirem)
+  migrateOldConfigs(): void {
+    try {
+      // Verificar se existem configurações antigas
+      const oldTelegram = localStorage.getItem('aci_api_config');
+      const oldUser = localStorage.getItem('aci_user');
+
+      if (oldTelegram || oldUser) {
+        const config = this.getSystemConfig();
+
+        // Migrar configurações do Telegram
+        if (oldTelegram) {
+          try {
+            const telegramConfig = JSON.parse(oldTelegram);
+            if (telegramConfig.botToken && telegramConfig.destinations?.[0]?.chatId) {
+              config.telegram = {
+                botToken: telegramConfig.botToken,
+                chatId: telegramConfig.destinations[0].chatId,
+                isConfigured: true
+              };
+            }
+          } catch (e) {
+            console.log('Configuração antiga do Telegram não encontrada');
+          }
+        }
+
+        // Migrar ID de afiliado
+        if (oldUser) {
+          try {
+            const userConfig = JSON.parse(oldUser);
+            if (userConfig.affiliateId) {
+              config.shopee = {
+                affiliateId: userConfig.affiliateId,
+                isConfigured: true
+              };
+            }
+          } catch (e) {
+            console.log('Configuração antiga do usuário não encontrada');
+          }
+        }
+
+        // Verificar se há configurações antigas do WhatsApp
+        const oldWhatsApp = localStorage.getItem('aci_whatsapp_config');
+        if (oldWhatsApp) {
+          try {
+            const whatsappConfig = JSON.parse(oldWhatsApp);
+            if (whatsappConfig.apiKey || whatsappConfig.phoneNumber) {
+              config.whatsapp = {
+                apiKey: whatsappConfig.apiKey || '',
+                instanceName: whatsappConfig.phoneNumber || '', // Migrar phoneNumber para instanceName
+                apiUrl: whatsappConfig.apiUrl || 'https://evolution.iau2.com.br/',
+                channelUrl: whatsappConfig.channelUrl || '',
+                isConfigured: !!(whatsappConfig.apiKey && whatsappConfig.phoneNumber)
+              };
+            }
+          } catch (e) {
+            console.log('Configuração antiga do WhatsApp não encontrada');
+          }
+        }
+
+        this.saveSystemConfig(config);
+        console.log('Configurações antigas migradas com sucesso');
+      }
+    } catch (error) {
+      console.error('Erro na migração:', error);
+    }
   }
 }
 
-// Instância singleton
 export const configService = new ConfigService();
+
+// Executar migração na inicialização
+configService.migrateOldConfigs();

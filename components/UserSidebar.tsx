@@ -1,12 +1,5 @@
 import React from 'react';
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  credits: number;
-  avatar: string;
-}
+import { User } from '../services/authService';
 
 interface UserSidebarProps {
   user: User;
@@ -21,7 +14,7 @@ export const UserSidebar: React.FC<UserSidebarProps> = ({ user, onAddCredits, on
       <div className="p-6 border-b border-gray-700">
         <div className="flex items-center gap-3 mb-4">
           <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-xl font-bold">
-            {user.avatar}
+            {user.avatar || user.name.charAt(0).toUpperCase()}
           </div>
           <div>
             <h3 className="font-semibold text-lg">{user.name}</h3>

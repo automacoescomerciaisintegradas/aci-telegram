@@ -1,61 +1,32 @@
-import React, { useState, useEffect } from 'react';
-import { AuthPage } from './AuthPage';
-import { AdminAuthPage } from './AdminAuthPage';
+import React, { useState } from 'react';
+import { UserLoginPage } from './UserLoginPage';
+import { AdminLoginPage } from './AdminLoginPage';
+import { AuthUser } from '../services/supabaseService';
 
 interface AuthRouterProps {
-  onLoginSuccess: (userType: 'user' | 'admin') => void;
+  onLogin: (user: AuthUser) => void;
 }
 
-export const AuthRouter: React.FC<AuthRouterProps> = ({ onLoginSuccess }) => {
-  const [authMode, setAuthMode] = useState<'user' | 'admin'>('user');
+type AuthMode = 'user' | 'admin';
 
-  useEffect(() => {
-    // Verificar se a URL contém #admin
-    const checkAdminMode = () => {
-      if (window.location.hash === '#admin') {
-        setAuthMode('admin');
-      } else {
-        setAuthMode('user');
-      }
-    };
+export const AuthRouter: React.FC<AuthRouterProps> = ({ onLogin }) => {
+  const [authMode, setAuthMode] = useState<AuthMode>('user');
 
-    checkAdminMode();
-
-    // Escutar mudanças no hash
-    window.addEventListener('hashchange', checkAdminMode);
-    return () => window.removeEventListener('hashchange', checkAdminMode);
-  }, []);
-
-  const handleUserLogin = () => {
-    onLoginSuccess('user');
-  };
-
-  const handleAdminLogin = () => {
-    onLoginSuccess('admin');
-  };
-
-  const switchToAdmin = () => {
-    window.location.hash = 'admin';
-    setAuthMode('admin');
-  };
-
-  const switchToUser = () => {
-    window.location.hash = '';
-    setAuthMode('user');
-  };
+  const switchToAdmin = () => setAuthMode('admin');
+  const switchToUser = () => setAuthMode('user');
 
   if (authMode === 'admin') {
     return (
-      <AdminAuthPage 
-        onLoginSuccess={handleAdminLogin}
-        onBackToUser={switchToUser}
+      <AdminLoginPage 
+        onLogin={onLogin}
+        onSwitchToUser={switchToUser}
       />
     );
   }
 
   return (
-    <AuthPage 
-      onLoginSuccess={handleUserLogin}
+    <UserLoginPage 
+      onLogin={onLogin}
       onSwitchToAdmin={switchToAdmin}
     />
   );

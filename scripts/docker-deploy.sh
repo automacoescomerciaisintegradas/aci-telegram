@@ -77,10 +77,17 @@ if docker ps | grep -q $APP_NAME; then
     
     # Health check
     echo -e "${BLUE}🔍 Verificando saúde da aplicação...${NC}"
-    if curl -f http://localhost/health > /dev/null 2>&1; then
+    if curl -f http://localhost/ > /dev/null 2>&1; then
         echo -e "${GREEN}✅ Health check passou!${NC}"
     else
         echo -e "${YELLOW}⚠️  Health check falhou, mas a aplicação pode estar iniciando...${NC}"
+        echo -e "${YELLOW}⏳ Aguardando mais 10 segundos...${NC}"
+        sleep 10
+        if curl -f http://localhost/ > /dev/null 2>&1; then
+            echo -e "${GREEN}✅ Health check passou na segunda tentativa!${NC}"
+        else
+            echo -e "${YELLOW}⚠️  Aplicação pode estar ainda inicializando. Verifique os logs.${NC}"
+        fi
     fi
     
     echo -e "${GREEN}🎉 Deploy concluído com sucesso!${NC}"

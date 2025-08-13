@@ -7,6 +7,7 @@ export interface User {
   avatar_url?: string;
   role: 'admin' | 'user';
   provider?: 'email' | 'google';
+  credits: number;
   createdAt: Date;
   lastLogin?: Date;
 }
@@ -36,14 +37,24 @@ export interface SignupCredentials {
   password: string;
 }
 
+export interface ResetPasswordCredentials {
+  email: string;
+}
+
+export interface ChangePasswordCredentials {
+  currentPassword: string;
+  newPassword: string;
+}
+
 // Simulação de usuários (em produção, isso viria do backend)
 const MOCK_USERS: User[] = [
   {
     id: '1',
     email: 'admin@aci.com',
-    name: 'Administrador',
+    name: 'Administrador do Sistema',
     role: 'admin',
     provider: 'email',
+    credits: 1000.00,
     createdAt: new Date('2024-01-01'),
     lastLogin: new Date(),
   },
@@ -53,6 +64,7 @@ const MOCK_USERS: User[] = [
     name: 'Usuário Teste',
     role: 'user',
     provider: 'email',
+    credits: 50.00,
     createdAt: new Date('2024-01-15'),
   },
 ];
@@ -127,6 +139,7 @@ class AuthService {
       name: credentials.name,
       role: 'user',
       provider: 'email',
+      credits: 25.00,
       createdAt: new Date(),
       lastLogin: new Date(),
     };
@@ -169,6 +182,7 @@ class AuthService {
       avatar_url: 'https://via.placeholder.com/40',
       role: 'user',
       provider: 'google',
+      credits: 25.00,
       createdAt: new Date(),
       lastLogin: new Date(),
     };
@@ -255,19 +269,65 @@ class AuthService {
     };
   }
 
+  // Reset password
+  async resetPassword(credentials: ResetPasswordCredentials): Promise<{ message: string }> {
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    const user = MOCK_USERS.find(u => u.email === credentials.email);
+    if (!user) {
+      throw new Error('Email não encontrado');
+    }
+
+    // Simula envio de email
+    return {
+      message: 'Email de recuperação enviado com sucesso! Verifique sua caixa de entrada.'
+    };
+  }
+
+  // Change password
+  async changePassword(credentials: ChangePasswordCredentials): Promise<{ message: string }> {
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    const currentUser = this.getCurrentUser();
+    if (!currentUser) {
+      throw new Error('Usuário não autenticado');
+    }
+
+    // Em produção, verificaria a senha atual
+    // Por simplicidade, vamos aceitar qualquer senha atual
+    return {
+      message: 'Senha alterada com sucesso!'
+    };
+  }
+
+  // Refresh token
+  async refreshToken(): Promise<void> {
+    const token = this.getStoredToken();
+    if (!token) {
+      throw new Error('Token não encontrado');
+    }
+
+    // Simula refresh do token
+    const newToken: AuthToken = {
+      accessToken: this.generateToken(),
+      refreshToken: token.refreshToken,
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+    };
+
+    const user = this.getCurrentUser();
+    if (user) {
+      this.saveAuthData(user, newToken);
+    }
+  }
+
   // Método para monitorar mudanças de autenticação
   onAuthStateChange(callback: (session: Session | null) => void): () => void {
     // Verifica estado inicial
     const currentSession = this.getCurrentSession();
     callback(currentSession);
 
-    // Simula listener de mudanças
-    const interval = setInterval(() => {
-      const session = this.getCurrentSession();
-      callback(session);
-    }, 1000);
-
-    return () => clearInterval(interval);
+    // Retorna função vazia para cleanup (sem polling)
+    return () => {};
   }
 
   // Métodos privados
