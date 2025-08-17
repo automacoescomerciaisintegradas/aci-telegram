@@ -13,6 +13,9 @@ import ProductSearch from './components/ProductSearch';
 import SystemConfig from './components/SystemConfig';
 import { TelegramShopeePage as TelegramShopeeFull } from './components/TelegramShopeePage';
 import { CreditStatement } from './components/CreditStatement';
+import { WhatsAppChannelIntegration } from './components/WhatsAppChannelIntegration';
+import { BlogShopee } from './components/BlogShopee';
+import { BlogPreview } from './components/BlogPreview';
 
 // Componente de Login/Cadastro Completo
 const LoginPage: React.FC<{ onLogin: (user: any) => void }> = ({ onLogin }) => {
@@ -342,38 +345,65 @@ const DashboardHome: React.FC<{ onNavigate: (page: string) => void; user: any }>
           </button>
         </div>
 
-                      <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
-                <h3 className="text-xl font-semibold mb-4 text-blue-400">Extrato de Créditos</h3>
-                <p className="text-gray-300 mb-4">Veja suas movimentações de créditos.</p>
-                <button
-                  onClick={() => onNavigate('credit-statement')}
-                  className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg transition-colors"
-                >
-                  Abrir Extrato
-                </button>
-              </div>
-              
-              <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
-                <h3 className="text-xl font-semibold mb-4 text-green-400">Busca de Produtos</h3>
-                <p className="text-gray-300 mb-4">Encontre produtos para suas campanhas de afiliado.</p>
-                <button
-                  onClick={() => onNavigate('product-search')}
-                  className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg transition-colors"
-                >
-                  Buscar Produtos
-                </button>
-              </div>
-              
-              <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
-                <h3 className="text-xl font-semibold mb-4 text-purple-400">Configurações do Sistema</h3>
-                <p className="text-gray-300 mb-4">Configure suas APIs e integrações.</p>
-                <button
-                  onClick={() => onNavigate('system-config')}
-                  className="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg transition-colors"
-                >
-                  Configurações
-                </button>
-              </div>
+        <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
+          <h3 className="text-xl font-semibold mb-4 text-blue-400">Extrato de Créditos</h3>
+          <p className="text-gray-300 mb-4">Veja suas movimentações de créditos.</p>
+          <button
+            onClick={() => onNavigate('credit-statement')}
+            className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg transition-colors"
+          >
+            Abrir Extrato
+          </button>
+        </div>
+
+        <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
+          <h3 className="text-xl font-semibold mb-4 text-green-400">Busca de Produtos</h3>
+          <p className="text-gray-300 mb-4">Encontre produtos para suas campanhas de afiliado.</p>
+          <button
+            onClick={() => onNavigate('product-search')}
+            className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg transition-colors"
+          >
+            Buscar Produtos
+          </button>
+        </div>
+
+        <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
+          <h3 className="text-xl font-semibold mb-4 text-purple-400">Configurações do Sistema</h3>
+          <p className="text-gray-300 mb-4">Configure suas APIs e integrações.</p>
+          <button
+            onClick={() => onNavigate('system-config')}
+            className="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg transition-colors"
+          >
+            Configurações
+          </button>
+        </div>
+
+        <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
+          <h3 className="text-xl font-semibold mb-4 text-green-400">WhatsApp Channel</h3>
+          <p className="text-gray-300 mb-4">Envio automático para WhatsApp Channel e Telegram.</p>
+          <button
+            onClick={() => onNavigate('whatsapp-channel')}
+            className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg transition-colors"
+          >
+            🚀 Configurar Envio
+          </button>
+        </div>
+
+        <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
+          <h3 className="text-xl font-semibold mb-4 text-orange-400">Blog Shopee</h3>
+          <p className="text-gray-300 mb-4">Landing page para venda de produtos Shopee com links de afiliado.</p>
+          <button
+            onClick={() => onNavigate('blog-shopee')}
+            className="bg-orange-600 hover:bg-orange-700 px-4 py-2 rounded-lg transition-colors"
+          >
+            🛍️ Abrir Blog
+          </button>
+        </div>
+      </div>
+
+      {/* Blog Preview */}
+      <div className="mt-8">
+        <BlogPreview onNavigate={onNavigate} />
       </div>
 
       <div className="mt-8 bg-gray-800 border border-gray-700 rounded-lg p-6">
@@ -562,6 +592,7 @@ const SimpleAdmin: React.FC<{ onBack: () => void; onManageCredits: () => void }>
 const Dashboard: React.FC<{ user: any; onLogout: () => void; onAddCredits: () => void }> = ({ user, onLogout, onAddCredits }) => {
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [showCreditSidebar, setShowCreditSidebar] = useState(false);
+  const [showCreditStatement, setShowCreditStatement] = useState(false);
 
   const renderPage = () => {
     switch (currentPage) {
@@ -626,7 +657,10 @@ const Dashboard: React.FC<{ user: any; onLogout: () => void; onAddCredits: () =>
         );
       case 'credit-statement':
         return (
-          <CreditStatement onBack={() => setCurrentPage('dashboard')} />
+          <CreditStatement
+            user={user}
+            onClose={() => setCurrentPage('dashboard')}
+          />
         );
       case 'product-search':
         return (
@@ -635,6 +669,14 @@ const Dashboard: React.FC<{ user: any; onLogout: () => void; onAddCredits: () =>
       case 'system-config':
         return (
           <SystemConfig onBack={() => setCurrentPage('dashboard')} />
+        );
+      case 'whatsapp-channel':
+        return (
+          <WhatsAppChannelIntegration onBack={() => setCurrentPage('dashboard')} />
+        );
+      case 'blog-shopee':
+        return (
+          <BlogShopee onBack={() => setCurrentPage('dashboard')} />
         );
       default:
         return <DashboardHome onNavigate={setCurrentPage} user={user} />;
@@ -664,6 +706,17 @@ const Dashboard: React.FC<{ user: any; onLogout: () => void; onAddCredits: () =>
               </button>
             )}
             <h1 className="text-2xl font-bold text-blue-500">ACI Dashboard</h1>
+            {currentPage === 'dashboard' && (
+              <button
+                onClick={() => setCurrentPage('blog-shopee')}
+                className="hidden md:flex items-center gap-2 bg-orange-500 hover:bg-orange-600 px-3 py-1 rounded-lg transition-colors text-sm"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
+                </svg>
+                <span>Blog</span>
+              </button>
+            )}
           </div>
           <div className="flex items-center gap-4">
             {/* Botão de Créditos */}
@@ -742,7 +795,7 @@ const App: React.FC = () => {
       try {
         const saved = localStorage.getItem('aci_user');
         if (saved) setUser(JSON.parse(saved));
-      } catch {}
+      } catch { }
     };
     window.addEventListener('aci:user-updated', handler);
     return () => window.removeEventListener('aci:user-updated', handler);
@@ -767,12 +820,12 @@ const App: React.FC = () => {
             //
             // Nota: Estrutura simples para navegação programática
             // sem adicionar roteador.
-            
-            
+
+
           }, 0);
           setAppState('generate-link');
         }
-      } catch {}
+      } catch { }
     };
     window.addEventListener('aci:navigate', navigateHandler);
     return () => window.removeEventListener('aci:navigate', navigateHandler);
@@ -824,8 +877,8 @@ const App: React.FC = () => {
         try {
           window.dispatchEvent(new Event('aci:user-updated'));
           window.dispatchEvent(new Event('aci:transactions-updated'));
-        } catch {}
-      } catch {}
+        } catch { }
+      } catch { }
 
       setAppState('dashboard');
       setSelectedAmount(0);
@@ -859,7 +912,7 @@ const App: React.FC = () => {
 
     case 'solutions':
       return (
-        <SolutionsPage 
+        <SolutionsPage
           onBack={() => setAppState('landing')}
         />
       );

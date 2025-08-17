@@ -1,143 +1,192 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
-type Transaction = {
+interface Transaction {
   id: string;
-  type: 'debit' | 'credit';
-  amount: number; // negativo para débito, positivo para crédito
+  type: 'credit' | 'debit';
+  amount: number;
   service: string;
-  at: string; // ISO
-};
-
-interface CreditStatementProps {
-  onBack: () => void;
+  at: string;
 }
 
-const formatBRL = (value: number) =>
-  value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+interface CreditStatementProps {
+  user: any;
+  onClose: () => void;
+}
 
-export const CreditStatement: React.FC<CreditStatementProps> = ({ onBack }) => {
+export const CreditStatement: React.FC<CreditStatementProps> = ({ user, onClose }) => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [currentCredits, setCurrentCredits] = useState<number>(0);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    loadTransactions();
+  }, []);
+
+  const loadTransactions = () => {
     try {
-      const raw = localStorage.getItem('aci_credit_transactions') || '[]';
-      const parsed: Transaction[] = JSON.parse(raw);
-      // Ordenar do mais recente para o mais antigo
-      parsed.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
-      setTransactions(parsed);
-      const userRaw = localStorage.getItem('aci_user');
-      if (userRaw) {
-        const user = JSON.parse(userRaw);
-        setCurrentCredits(Number(user.credits || 0));
-      }
-    } catch {
-      setTransactions([]);
+      const txRaw = localStorage.getItem('aci_credit_transactions') || '[]';
+      const tx = JSON.parse(txRaw);
+      setTransactions(tx);
+
+      // Calcular saldo baseado nas transações
+      const calculatedBalance = tx.reduce((total: number, transaction: Transaction) => {
+        return transaction.type === 'credit'
+          ? total + transaction.amount
+          : total - transaction.amount;
+      }, 0);
+
+      console.log('Saldo calculado pelas transações:', calculatedBalance);
+      console.log('Saldo atual do usuário:', user.credits);
+
+    } catch (error) {
+      console.error('Erro ao carregar transações:', error);
+    } finally {
+      setIsLoading(false);
     }
-  }, []);
+  };
 
-  // Recarregar quando houver novas transações
-  useEffect(() => {
-    const refresh = () => {
-      try {
-        const raw = localStorage.getItem('aci_credit_transactions') || '[]';
-        const parsed: Transaction[] = JSON.parse(raw);
-        parsed.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
-        setTransactions(parsed);
-      } catch {}
-    };
-    window.addEventListener('aci:transactions-updated', refresh);
-    return () => window.removeEventListener('aci:transactions-updated', refresh);
-  }, []);
+  const clearTransactions = () => {
+    if (confirm('⚠️ Tem certeza que deseja limpar todo o histórico de transações?\n\nEsta ação não pode ser desfeita.')) {
+      localStorage.removeItem('aci_credit_transactions');
+      setTransactions([]);
+      alert('✅ Histórico de transações limpo com sucesso!');
+    }
+  };
 
-  // Atualizar saldo atual quando o usuário mudar
-  useEffect(() => {
-    const refreshUser = () => {
-      try {
-        const userRaw = localStorage.getItem('aci_user');
-        if (userRaw) {
-          const user = JSON.parse(userRaw);
-          setCurrentCredits(Number(user.credits || 0));
-        }
-      } catch {}
-    };
-    window.addEventListener('aci:user-updated', refreshUser);
-    return () => window.removeEventListener('aci:user-updated', refreshUser);
-  }, []);
+  const resetUserCredits = () => {
+    if (confirm('⚠️ Tem certeza que deseja zerar o saldo de créditos?\n\nEsta ação não pode ser desfeita.')) {
+      const updatedUser = { ...user, credits: 0 };
+      localStorage.setItem('aci_user', JSON.stringify(updatedUser));
 
-  const totals = useMemo(() => {
-    const credits = transactions
-      .filter(t => t.amount > 0)
-      .reduce((sum, t) => sum + t.amount, 0);
-    const debits = transactions
-      .filter(t => t.amount < 0)
-      .reduce((sum, t) => sum + Math.abs(t.amount), 0);
-    const balance = credits - debits;
-    return { credits, debits, balance };
-  }, [transactions]);
+      // Limpar transações também
+      localStorage.removeItem('aci_credit_transactions');
+      setTransactions([]);
+
+      // Recarregar a página para atualizar o estado
+      window.location.reload();
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleString('pt-BR');
+    } catch {
+      return dateString;
+    }
+  };
+
+  const formatCurrency = (amount: number) => {
+    return `R$ ${amount.toFixed(2).replace('.', ',')}`;
+  };
+
+  const totalCredits = transactions
+    .filter(tx => tx.type === 'credit')
+    .reduce((sum, tx) => sum + tx.amount, 0);
+
+  const totalDebits = transactions
+    .filter(tx => tx.type === 'debit')
+    .reduce((sum, tx) => sum + tx.amount, 0);
+
+  const calculatedBalance = totalCredits - totalDebits;
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
-      <div className="bg-gray-800 border-b border-gray-700 p-4">
-        <div className="flex items-center gap-4 max-w-6xl mx-auto">
-          <button onClick={onBack} className="bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded-lg transition-colors text-sm">
-            ← Voltar
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+        {/* Header */}
+        <div className="bg-gray-700 p-4 flex items-center justify-between">
+          <h2 className="text-xl font-bold text-white">💳 Extrato de Créditos</h2>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-white"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
           </button>
-          <h1 className="text-2xl font-bold text-blue-400">Extrato de Créditos</h1>
         </div>
-      </div>
 
-      <div className="p-8">
-        <div className="max-w-6xl mx-auto space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
-              <div className="text-gray-400 text-sm">Saldo atual</div>
-              <div className="text-green-400 text-2xl font-bold">{formatBRL(currentCredits)}</div>
+        {/* Content */}
+        <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+          {/* Resumo */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div className="bg-green-900/20 border border-green-600 rounded-lg p-4">
+              <h3 className="text-green-400 font-semibold mb-2">💰 Total Créditos</h3>
+              <p className="text-2xl font-bold text-green-300">{formatCurrency(totalCredits)}</p>
             </div>
-            <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
-              <div className="text-gray-400 text-sm">Débitos (movimentações)</div>
-              <div className="text-red-400 text-2xl font-bold">{formatBRL(totals.debits)}</div>
+
+            <div className="bg-red-900/20 border border-red-600 rounded-lg p-4">
+              <h3 className="text-red-400 font-semibold mb-2">💸 Total Gastos</h3>
+              <p className="text-2xl font-bold text-red-300">{formatCurrency(totalDebits)}</p>
             </div>
-            <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
-              <div className="text-gray-400 text-sm">Saldo (movimentações)</div>
-              <div className="text-blue-400 text-2xl font-bold">{formatBRL(totals.balance)}</div>
+
+            <div className="bg-blue-900/20 border border-blue-600 rounded-lg p-4">
+              <h3 className="text-blue-400 font-semibold mb-2">🏦 Saldo Atual</h3>
+              <p className="text-2xl font-bold text-blue-300">{formatCurrency(user.credits)}</p>
+              {Math.abs(calculatedBalance - user.credits) > 0.01 && (
+                <p className="text-xs text-yellow-400 mt-1">
+                  ⚠️ Divergência: {formatCurrency(calculatedBalance)} calculado
+                </p>
+              )}
             </div>
           </div>
 
-          <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
-            <div className="p-4 border-b border-gray-700 font-semibold">Movimentações</div>
-            {transactions.length === 0 ? (
-              <div className="p-6 text-gray-400">Nenhuma movimentação encontrada.</div>
+          {/* Ações */}
+          <div className="flex gap-4 mb-6">
+            <button
+              onClick={clearTransactions}
+              className="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+            >
+              🗑️ Limpar Histórico
+            </button>
+
+            <button
+              onClick={resetUserCredits}
+              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+            >
+              🔄 Zerar Saldo
+            </button>
+          </div>
+
+          {/* Lista de Transações */}
+          <div className="bg-gray-700 rounded-lg">
+            <div className="p-4 border-b border-gray-600">
+              <h3 className="text-lg font-semibold text-white">📋 Histórico de Movimentações</h3>
+              <p className="text-gray-400 text-sm">{transactions.length} transações encontradas</p>
+            </div>
+
+            {isLoading ? (
+              <div className="p-8 text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
+                <p className="text-gray-400">Carregando transações...</p>
+              </div>
+            ) : transactions.length === 0 ? (
+              <div className="p-8 text-center">
+                <p className="text-gray-400">Nenhuma transação encontrada</p>
+              </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-700">
-                  <thead className="bg-gray-800">
-                    <tr>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Data</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Tipo</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Serviço</th>
-                      <th className="px-4 py-2 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">Valor</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-gray-900 divide-y divide-gray-800">
-                    {transactions.map(tx => (
-                      <tr key={tx.id}>
-                        <td className="px-4 py-3 text-sm text-gray-300">{new Date(tx.at).toLocaleString('pt-BR')}</td>
-                        <td className="px-4 py-3 text-sm">
-                          {tx.amount < 0 ? (
-                            <span className="text-red-400">Débito</span>
-                          ) : (
-                            <span className="text-green-400">Crédito</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-300">{tx.service}</td>
-                        <td className="px-4 py-3 text-sm text-right {tx.amount < 0 ? 'text-red-300' : 'text-green-300'}">
-                          {formatBRL(tx.amount)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="divide-y divide-gray-600">
+                {transactions.map((transaction) => (
+                  <div key={transaction.id} className="p-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${transaction.type === 'credit'
+                        ? 'bg-green-600 text-green-100'
+                        : 'bg-red-600 text-red-100'
+                        }`}>
+                        {transaction.type === 'credit' ? '💰' : '💸'}
+                      </div>
+                      <div>
+                        <p className="text-white font-medium">{transaction.service}</p>
+                        <p className="text-gray-400 text-sm">{formatDate(transaction.at)}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className={`text-lg font-bold ${transaction.type === 'credit' ? 'text-green-400' : 'text-red-400'
+                        }`}>
+                        {transaction.type === 'credit' ? '+' : '-'}{formatCurrency(transaction.amount)}
+                      </p>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>
@@ -146,5 +195,3 @@ export const CreditStatement: React.FC<CreditStatementProps> = ({ onBack }) => {
     </div>
   );
 };
-
-

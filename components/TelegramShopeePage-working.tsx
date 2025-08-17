@@ -18,6 +18,9 @@ interface TelegramConfig {
     botToken: string;
     affiliateId: string;
     destinations: ChatDestination[];
+    whatsappChannelUrl: string;
+    sendInterval: number; // em segundos
+    autoSend: boolean;
 }
 
 interface OfferMessage {
@@ -45,7 +48,10 @@ export const TelegramShopeePage: React.FC = () => {
     const [config, setConfig] = useState<TelegramConfig>({
         botToken: '',
         affiliateId: '',
-        destinations: []
+        destinations: [],
+        whatsappChannelUrl: 'https://whatsapp.com/channel/0029Vb6aZAsGOj9phEbZG72W',
+        sendInterval: 30, // 30 segundos por padrão
+        autoSend: false
     });
     const [productUrl, setProductUrl] = useState('');
     const [product, setProduct] = useState<Product | null>(null);
@@ -70,16 +76,21 @@ export const TelegramShopeePage: React.FC = () => {
                 setConfig(prev => ({
                     ...prev,
                     botToken: parsed.telegramBotToken || '',
-                    affiliateId: parsed.telegramAffiliateId || '',
-                    destinations: parsed.telegramDestinations || []
+                    affiliateId: parsed.shopeeAffiliateId || parsed.telegramAffiliateId || '',
+                    destinations: parsed.telegramDestinations || [],
+                    whatsappChannelUrl: parsed.whatsappChannelUrl || 'https://whatsapp.com/channel/0029Vb6aZAsGOj9phEbZG72W',
+                    sendInterval: parsed.sendInterval || 30,
+                    autoSend: parsed.autoSend || false
                 }));
-                console.log('Configurações carregadas:', {
-                    botToken: parsed.telegramBotToken ? '***' : '',
-                    affiliateId: parsed.telegramAffiliateId ? '***' : '',
-                    destinations: (parsed.telegramDestinations || []).length
+                console.log('✅ Configurações carregadas:', {
+                    botToken: parsed.telegramBotToken ? '***' : 'não configurado',
+                    affiliateId: (parsed.shopeeAffiliateId || parsed.telegramAffiliateId) ? '***' : 'não configurado',
+                    destinations: (parsed.telegramDestinations || []).length,
+                    whatsappChannel: parsed.whatsappChannelUrl ? 'configurado' : 'padrão'
                 });
             } catch (error: unknown) {
-                console.error('Erro ao carregar configurações:', error);
+                console.error('❌ Erro ao carregar configurações:', error);
+                setError('Erro ao carregar configurações salvas. Verifique o console.');
             }
         }
     }, []);
@@ -492,6 +503,12 @@ export const TelegramShopeePage: React.FC = () => {
                         image_url: "https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=400&h=400&fit=crop&crop=center"
                     },
 
+                    '5VL71tK3o0': {
+                        title: "Kit Ferramentas Profissional 108 Peças - Chaves de Fenda, Phillips, Torx e Acessórios",
+                        price: "R$ 89,90",
+                        image_url: "https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=400&h=400&fit=crop&crop=center"
+                    },
+
                     // Exemplo de como adicionar mais produtos:
                     // 'ABC123DEF': {
                     //     title: "Nome do Seu Produto Aqui",
@@ -648,19 +665,21 @@ export const TelegramShopeePage: React.FC = () => {
                 category = 'Acessórios';
             }
 
-            const mockText = `🔥 OFERTA IMPERDÍVEL! 🔥
+            // Usar sempre o modelo de mensagem especificado
+            const mockText = `🚨 OFERTA RELÂMPAGO! 🚨
 
 ${emoji} ${product.title}
 
 💰 Por apenas ${product.price}
-⚡ Entrega rápida e segura
-🎁 Garantia oficial
-🏷️ Categoria: ${category}
+
+🔗 👉 Compre agora
 
 ✨ Não perca essa oportunidade única!
-👆 Clique no botão abaixo e garanta já o seu!
+👆 Clique no botão abaixo e garante já o seu!
 
-#OfertaEspecial #Shopee #${category.replace(' ', '')}`;
+⚠ O preço pode mudar a qualquer momento.
+
+#OfertaEspecial #Shopee #Promoção`;
 
             setOfferMessage({
                 text: mockText,
@@ -1333,6 +1352,31 @@ ${emoji} ${product.title}
                 <p className="text-xs text-dark-text-secondary mt-2">
                     Você pode editar o texto antes de enviar
                 </p>
+
+                {/* Aviso FIXO sobre imagens ilustrativas */}
+                <div className="mt-3 p-4 bg-gradient-to-r from-red-900/40 to-orange-900/40 border-2 border-red-400/60 rounded-lg shadow-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                        <span className="text-red-300 text-base animate-pulse">⚠</span>
+                        <p className="text-xs font-bold text-red-200 uppercase tracking-wider">
+                            Atenção !!!
+                        </p>
+                    </div>
+                    <p className="text-xs text-orange-100 leading-relaxed font-medium bg-black/20 p-2 rounded">
+                        As imagens são apenas ilustrativas. Os respectivos produtos estão nos links.
+                    </p>
+                </div>
+
+                {/* Template da mensagem */}
+                <div className="mt-3 p-3 bg-blue-900/20 border border-blue-500/40 rounded-lg">
+                    <p className="text-xs text-blue-100 leading-relaxed opacity-75">
+                        🚨 OFERTA RELÂMPAGO! 🚨<br />
+                        🔗 👉 Compre agora<br />
+                        ✨ Não perca essa oportunidade única!<br />
+                        👆 Clique no botão abaixo e garante já o seu!<br />
+                        ⚠ O preço pode mudar a qualquer momento.<br />
+                        #OfertaEspecial #Shopee #Promoção
+                    </p>
+                </div>
             </div>
 
             {error && (
