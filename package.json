@@ -32,9 +32,13 @@
   "dependencies": {
     "@google/genai": "^1.8.0",
     "@supabase/supabase-js": "^2.54.0",
+    "i18next": "^23.11.5",
+    "i18next-browser-languagedetector": "^8.0.0",
+    "i18next-http-backend": "^2.5.2",
     "lucide-react": "^0.539.0",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "react-dom": "^19.1.0",
+    "react-i18next": "^14.1.2"
   },
   "devDependencies": {
     "@google/generative-ai": "^0.11.5",

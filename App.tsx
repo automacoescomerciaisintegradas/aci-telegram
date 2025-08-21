@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { CreditSidebar } from './components/CreditSidebar';
 import { CreditPlans } from './components/CreditPlans';
 import { CheckoutPix } from './components/CheckoutPix';
@@ -590,6 +591,7 @@ const SimpleAdmin: React.FC<{ onBack: () => void; onManageCredits: () => void }>
 
 // Dashboard Principal com Sidebar de Créditos
 const Dashboard: React.FC<{ user: any; onLogout: () => void; onAddCredits: () => void }> = ({ user, onLogout, onAddCredits }) => {
+  const { t } = useTranslation();
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [showCreditSidebar, setShowCreditSidebar] = useState(false);
   const [showCreditStatement, setShowCreditStatement] = useState(false);
@@ -705,7 +707,7 @@ const Dashboard: React.FC<{ user: any; onLogout: () => void; onAddCredits: () =>
                 ← Voltar
               </button>
             )}
-            <h1 className="text-2xl font-bold text-blue-500">ACI Dashboard</h1>
+            <h1 className="text-2xl font-bold text-blue-500">{t('welcome')}</h1>
             {currentPage === 'dashboard' && (
               <button
                 onClick={() => setCurrentPage('blog-shopee')}
